@@ -1,0 +1,114 @@
+.model-loader {
+  background: #151933;
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+.model-loader h2 {
+  text-align: center;
+  color: #a78bfa;
+  margin-bottom: 30px;
+  font-size: 1.8rem;
+}
+
+.model-selection {
+  margin-bottom: 30px;
+}
+
+.radio-group {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #0a0e27;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.radio-group:has(input[type="radio"]:checked) {
+  border-color: #667eea;
+}
+
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: #c4b5fd;
+}
+
+.radio-group input[type="radio"] {
+  width: auto;
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.model-select,
+.model-input {
+  width: 100%;
+  padding: 12px;
+  background: #1a1f3a;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 1rem;
+  margin-top: 10px;
+}
+
+.model-select:focus,
+.model-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.load-button {
+  width: 100%;
+  padding: 15px;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.progress-message {
+  text-align: center;
+  padding: 12px;
+  background: #1e3a5f;
+  color: #93c5fd;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.info-box {
+  background: #1e3a5f;
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+}
+
+.info-box h4 {
+  color: #93c5fd;
+  margin-bottom: 12px;
+  font-size: 1rem;
+}
+
+.info-box ul {
+  color: #bfdbfe;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  padding-left: 20px;
+}
+
+.info-box li {
+  margin-bottom: 8px;
+}

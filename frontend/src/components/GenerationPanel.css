@@ -1,0 +1,121 @@
+.generation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+  font-family: 'Courier New', monospace;
+}
+
+.params-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.steering-section {
+  border-top: 1px solid #374151;
+  padding-top: 20px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.section-header h3 {
+  margin: 0;
+}
+
+.add-button {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  background: #059669;
+}
+
+.add-button:hover:not(:disabled) {
+  background: #047857;
+}
+
+.empty-message {
+  text-align: center;
+  color: #6b7280;
+  padding: 20px;
+  font-style: italic;
+}
+
+.steering-configs {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.steering-config {
+  background: #0a0e27;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #374151;
+}
+
+.config-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.config-row:last-child {
+  margin-bottom: 0;
+}
+
+.config-row input[type="checkbox"] {
+  width: auto;
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.vector-select {
+  flex: 1;
+  padding: 8px;
+  background: #151933;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+}
+
+.remove-button {
+  padding: 5px 12px;
+  background: #dc2626;
+  font-size: 1.2rem;
+  line-height: 1;
+  min-width: auto;
+}
+
+.remove-button:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.config-row label {
+  min-width: 120px;
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.config-row input[type="range"] {
+  flex: 1;
+  height: 6px;
+  background: linear-gradient(to right, #667eea, #764ba2);
+}
+
+.generate-button {
+  width: 100%;
+  padding: 15px;
+  font-size: 1.1rem;
+  margin-top: 10px;
+}

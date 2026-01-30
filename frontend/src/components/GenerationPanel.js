@@ -1,0 +1,238 @@
+import React, { useState } from 'react';
+import './GenerationPanel.css';
+
+function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationComplete }) {
+  const [prompt, setPrompt] = useState('Tell me a short story about a robot.');
+  const [maxTokens, setMaxTokens] = useState(20);
+  const [temperature, setTemperature] = useState(1.0);
+  const [topK, setTopK] = useState(50);
+  const [topP, setTopP] = useState(0.9);
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // Steering configurations
+  const [steeringConfigs, setSteeringConfigs] = useState([]);
+
+  const addSteeringConfig = () => {
+    if (steeringVectors.length === 0) {
+      alert('Please upload a steering vector first');
+      return;
+    }
+    
+    const defaultLayer = Math.floor(modelInfo.num_layers / 2);
+    setSteeringConfigs([
+      ...steeringConfigs,
+      {
+        id: Date.now(),
+        vector_name: steeringVectors[0].name,
+        layer: defaultLayer,
+        coefficient: 1.0,
+        enabled: true
+      }
+    ]);
+  };
+
+  const removeSteeringConfig = (id) => {
+    setSteeringConfigs(steeringConfigs.filter(config => config.id !== id));
+  };
+
+  const updateSteeringConfig = (id, field, value) => {
+    setSteeringConfigs(steeringConfigs.map(config =>
+      config.id === id ? { ...config, [field]: value } : config
+    ));
+  };
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+          max_new_tokens: maxTokens,
+          temperature,
+          top_k: topK,
+          top_p: topP,
+          steering_configs: steeringConfigs.map(({ id, ...rest }) => rest)
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Generation failed');
+      }
+
+      const data = await response.json();
+      onGenerationComplete(data);
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <div className="generation-panel">
+      <h2>🎯 Generation Settings</h2>
+
+      <div className="form-group">
+        <label>Prompt:</label>
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          rows={4}
+          disabled={generating}
+          placeholder="Enter your prompt here..."
+        />
+      </div>
+
+      <div className="params-grid">
+        <div className="form-group">
+          <label>Max Tokens: {maxTokens}</label>
+          <input
+            type="range"
+            min="1"
+            max="100"
+            value={maxTokens}
+            onChange={(e) => setMaxTokens(parseInt(e.target.value))}
+            disabled={generating}
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Temperature: {temperature.toFixed(2)}</label>
+          <input
+            type="range"
+            min="0.1"
+            max="2.0"
+            step="0.1"
+            value={temperature}
+            onChange={(e) => setTemperature(parseFloat(e.target.value))}
+            disabled={generating}
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Top-K: {topK}</label>
+          <input
+            type="range"
+            min="1"
+            max="100"
+            value={topK}
+            onChange={(e) => setTopK(parseInt(e.target.value))}
+            disabled={generating}
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Top-P: {topP.toFixed(2)}</label>
+          <input
+            type="range"
+            min="0.1"
+            max="1.0"
+            step="0.05"
+            value={topP}
+            onChange={(e) => setTopP(parseFloat(e.target.value))}
+            disabled={generating}
+          />
+        </div>
+      </div>
+
+      <div className="steering-section">
+        <div className="section-header">
+          <h3>⚡ Steering Vectors</h3>
+          <button
+            onClick={addSteeringConfig}
+            disabled={generating || steeringVectors.length === 0}
+            className="add-button"
+          >
+            + Add Steering
+          </button>
+        </div>
+
+        {steeringConfigs.length === 0 ? (
+          <p className="empty-message">No steering vectors configured</p>
+        ) : (
+          <div className="steering-configs">
+            {steeringConfigs.map(config => (
+              <div key={config.id} className="steering-config">
+                <div className="config-row">
+                  <input
+                    type="checkbox"
+                    checked={config.enabled}
+                    onChange={(e) => updateSteeringConfig(config.id, 'enabled', e.target.checked)}
+                    disabled={generating}
+                  />
+                  
+                  <select
+                    value={config.vector_name}
+                    onChange={(e) => updateSteeringConfig(config.id, 'vector_name', e.target.value)}
+                    disabled={generating}
+                    className="vector-select"
+                  >
+                    {steeringVectors.map(vec => (
+                      <option key={vec.name} value={vec.name}>
+                        {vec.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    onClick={() => removeSteeringConfig(config.id)}
+                    disabled={generating}
+                    className="remove-button"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="config-row">
+                  <label>Layer: {config.layer}</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max={modelInfo.num_layers - 1}
+                    value={config.layer}
+                    onChange={(e) => updateSteeringConfig(config.id, 'layer', parseInt(e.target.value))}
+                    disabled={generating}
+                  />
+                </div>
+
+                <div className="config-row">
+                  <label>Coefficient: {config.coefficient.toFixed(2)}</label>
+                  <input
+                    type="range"
+                    min="-5"
+                    max="5"
+                    step="0.1"
+                    value={config.coefficient}
+                    onChange={(e) => updateSteeringConfig(config.id, 'coefficient', parseFloat(e.target.value))}
+                    disabled={generating}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <button
+        onClick={handleGenerate}
+        disabled={generating || !prompt}
+        className="generate-button"
+      >
+        {generating ? '⏳ Generating...' : '🚀 Generate'}
+      </button>
+
+      {error && <div className="error-message">❌ {error}</div>}
+    </div>
+  );
+}
+
+export default GenerationPanel;
