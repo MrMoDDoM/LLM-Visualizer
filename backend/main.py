@@ -123,6 +123,48 @@ async def get_status():
         "steering_vectors_count": len(model_state.steering_vectors)
     }
 
+@app.post("/reset")
+async def reset_all():
+    """Reset everything: unload model, clear cache, clear steering vectors"""
+    try:
+        # Clear model from memory
+        if model_state.model is not None:
+            del model_state.model
+            model_state.model = None
+        
+        if model_state.tokenizer is not None:
+            del model_state.tokenizer
+            model_state.tokenizer = None
+        
+        model_state.model_name = None
+        
+        # Clear steering vectors
+        model_state.steering_vectors.clear()
+        
+        # Clear generation cache
+        model_state.hidden_states_cache.clear()
+        model_state.tokens_cache.clear()
+        model_state.embedding_cache.clear()
+        
+        # Clear GPU cache if available
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+        
+        # Clear CPU cache
+        import gc
+        gc.collect()
+        
+        print("✅ System reset: all models and cache cleared")
+        
+        return {
+            "success": True,
+            "message": "System reset successfully. All models cleared from memory."
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error during reset: {str(e)}")
+
 @app.post("/load_model")
 async def load_model(request: ModelLoadRequest):
     """Load a HuggingFace model"""

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './VisualizationPanel.css';
 
-function VisualizationPanel({ apiBaseUrl, generationResult }) {
-  const [currentTokenIndex, setCurrentTokenIndex] = useState(0);
+function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex }) {
+  // Remove internal token index management - now controlled by parent
   const [normalizationMode, setNormalizationMode] = useState('auto');
   const [vmin, setVmin] = useState(-1.0);
   const [vmax, setVmax] = useState(1.0);
@@ -14,28 +14,33 @@ function VisualizationPanel({ apiBaseUrl, generationResult }) {
   const [timelineImage, setTimelineImage] = useState(null);
   const [loading, setLoading] = useState(false);
   
-  // Zoom and pan state
+  // Zoom and pan state for main image
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   
+  // Zoom and pan state for embedding image
+  const [embScale, setEmbScale] = useState(1);
+  const [embPosition, setEmbPosition] = useState({ x: 0, y: 0 });
+  const [isEmbDragging, setIsEmbDragging] = useState(false);
+  const [embDragStart, setEmbDragStart] = useState({ x: 0, y: 0 });
+  
   const canvasRef = useRef(null);
+  const embeddingCanvasRef = useRef(null);
   const timelineCanvasRef = useRef(null);
-
-  useEffect(() => {
-    if (generationResult) {
-      setCurrentTokenIndex(0);
-      loadVisualization(0);
-      loadTimeline();
-    }
-  }, [generationResult]);
 
   useEffect(() => {
     if (generationResult) {
       loadVisualization(currentTokenIndex);
     }
   }, [currentTokenIndex, normalizationMode, vmin, vmax]);
+
+  useEffect(() => {
+    if (generationResult) {
+      loadTimeline();
+    }
+  }, [generationResult, normalizationMode, vmin, vmax]);
 
   const loadVisualization = async (tokenIndex) => {
     setLoading(true);
@@ -94,17 +99,7 @@ function VisualizationPanel({ apiBaseUrl, generationResult }) {
     }
   };
 
-  const handlePrevToken = () => {
-    if (currentTokenIndex > 0) {
-      setCurrentTokenIndex(currentTokenIndex - 1);
-    }
-  };
-
-  const handleNextToken = () => {
-    if (currentTokenIndex < generationResult.num_tokens_generated - 1) {
-      setCurrentTokenIndex(currentTokenIndex + 1);
-    }
-  };
+  // Zoom handlers for main image
 
   const handleZoomIn = () => {
     setScale(s => Math.min(s * 1.5, 10));
@@ -117,6 +112,20 @@ function VisualizationPanel({ apiBaseUrl, generationResult }) {
   const handleResetView = () => {
     setScale(1);
     setPosition({ x: 0, y: 0 });
+  };
+
+  // Embedding zoom handlers
+  const handleEmbZoomIn = () => {
+    setEmbScale(s => Math.min(s * 1.5, 10));
+  };
+
+  const handleEmbZoomOut = () => {
+    setEmbScale(s => Math.max(s / 1.5, 0.5));
+  };
+
+  const handleEmbResetView = () => {
+    setEmbScale(1);
+    setEmbPosition({ x: 0, y: 0 });
   };
 
   const handleMouseDown = (e) => {
@@ -143,12 +152,46 @@ function VisualizationPanel({ apiBaseUrl, generationResult }) {
     setScale(s => Math.max(0.5, Math.min(10, s * delta)));
   };
 
+  // Embedding pan handlers
+  const handleEmbMouseDown = (e) => {
+    setIsEmbDragging(true);
+    setEmbDragStart({ x: e.clientX - embPosition.x, y: e.clientY - embPosition.y });
+  };
+
+  const handleEmbMouseMove = (e) => {
+    if (isEmbDragging) {
+      setEmbPosition({
+        x: e.clientX - embDragStart.x,
+        y: e.clientY - embDragStart.y
+      });
+    }
+  };
+
+  const handleEmbMouseUp = () => {
+    setIsEmbDragging(false);
+  };
+
+  const handleEmbWheel = (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    setEmbScale(s => Math.max(0.5, Math.min(10, s * delta)));
+  };
+
   const downloadImage = () => {
     if (!mainImage) return;
     
     const link = document.createElement('a');
     link.href = `data:image/png;base64,${mainImage}`;
     link.download = `hidden_states_token_${currentTokenIndex}.png`;
+    link.click();
+  };
+
+  const downloadEmbedding = () => {
+    if (!embeddingImage) return;
+    
+    const link = document.createElement('a');
+    link.href = `data:image/png;base64,${embeddingImage}`;
+    link.download = `embedding_token_${currentTokenIndex}.png`;
     link.click();
   };
 
@@ -175,7 +218,16 @@ function VisualizationPanel({ apiBaseUrl, generationResult }) {
     const tokenIndex = Math.floor(y / (layerHeight * numLayers));
     
     if (tokenIndex >= 0 && tokenIndex < numTokens) {
-      setCurrentTokenIndex(tokenIndex);
+      // Call parent to update token index
+      if (window.updateTokenIndex) {
+        window.updateTokenIndex(tokenIndex);
+      }
+    }
+  };
+
+  const handleTokenChipClick = (tokenIndex) => {
+    if (window.updateTokenIndex) {
+      window.updateTokenIndex(tokenIndex);
     }
   };
 
@@ -191,24 +243,8 @@ function VisualizationPanel({ apiBaseUrl, generationResult }) {
     <div className="visualization-panel">
       <h2>📊 Hidden States Visualization</h2>
 
-      {/* Controls */}
+      {/* Normalization Controls Only */}
       <div className="controls-section">
-        <div className="token-navigation">
-          <button onClick={handlePrevToken} disabled={currentTokenIndex === 0}>
-            ◀ Prev
-          </button>
-          <span className="token-info">
-            Token {currentTokenIndex + 1} / {generationResult.num_tokens_generated}
-            <strong> "{generationResult.tokens[currentTokenIndex]}"</strong>
-          </span>
-          <button 
-            onClick={handleNextToken} 
-            disabled={currentTokenIndex === generationResult.num_tokens_generated - 1}
-          >
-            Next ▶
-          </button>
-        </div>
-
         <div className="normalization-controls">
           <label>
             <input
@@ -259,12 +295,40 @@ function VisualizationPanel({ apiBaseUrl, generationResult }) {
       {/* Embedding Visualization */}
       {embeddingImage && (
         <div className="embedding-section">
-          <h3>🎯 Input Embedding</h3>
-          <div className="embedding-container">
+          <div className="visualization-header">
+            <h3>🎯 Input Embedding</h3>
+            <div className="zoom-controls">
+              <button onClick={handleEmbZoomOut}>-</button>
+              <span>{(embScale * 100).toFixed(0)}%</span>
+              <button onClick={handleEmbZoomIn}>+</button>
+              <button onClick={handleEmbResetView}>Reset</button>
+              <button onClick={downloadEmbedding}>💾 Download</button>
+            </div>
+          </div>
+          <div className="legend-box">
+            <p>📍 <strong>What:</strong> Initial token representation before processing</p>
+            <p>📐 <strong>Format:</strong> 1 row × {generationResult.hidden_size} dimensions</p>
+            <p>🎨 <strong>Colors:</strong> <span className="legend-blue">Blue (negative)</span> → White (zero) → <span className="legend-red">Red (positive)</span></p>
+          </div>
+          <div 
+            className="embedding-container"
+            onMouseDown={handleEmbMouseDown}
+            onMouseMove={handleEmbMouseMove}
+            onMouseUp={handleEmbMouseUp}
+            onMouseLeave={handleEmbMouseUp}
+            onWheel={handleEmbWheel}
+          >
             <img 
+              ref={embeddingCanvasRef}
               src={`data:image/png;base64,${embeddingImage}`}
               alt="Input Embedding"
-              style={{ width: '100%', height: 'auto', imageRendering: 'pixelated' }}
+              style={{
+                transform: `scale(${embScale}) translate(${embPosition.x / embScale}px, ${embPosition.y / embScale}px)`,
+                transformOrigin: 'top left',
+                cursor: isEmbDragging ? 'grabbing' : 'grab',
+                imageRendering: 'pixelated',
+              }}
+              draggable={false}
             />
           </div>
         </div>
@@ -281,6 +345,13 @@ function VisualizationPanel({ apiBaseUrl, generationResult }) {
             <button onClick={handleResetView}>Reset</button>
             <button onClick={downloadImage}>💾 Download</button>
           </div>
+        </div>
+
+        <div className="legend-box">
+          <p>📍 <strong>What:</strong> Hidden state activations for each layer processing this token</p>
+          <p>📐 <strong>Format:</strong> {generationResult.num_layers} layers (rows) × {generationResult.hidden_size} neurons (columns)</p>
+          <p>📖 <strong>Read:</strong> Top → Bottom = Layer 0 → Layer {generationResult.num_layers - 1}</p>
+          <p>🎨 <strong>Colors:</strong> <span className="legend-blue">Blue (negative)</span> → White (zero) → <span className="legend-red">Red (positive)</span></p>
         </div>
 
         <div 
@@ -302,6 +373,8 @@ function VisualizationPanel({ apiBaseUrl, generationResult }) {
                 transformOrigin: 'top left',
                 cursor: isDragging ? 'grabbing' : 'grab',
                 imageRendering: 'pixelated',
+                width: '100%',
+                height: 'auto',
               }}
               draggable={false}
             />
@@ -320,6 +393,12 @@ function VisualizationPanel({ apiBaseUrl, generationResult }) {
           <div className="timeline-header">
             <h3>📈 Complete Timeline</h3>
             <button onClick={downloadTimeline}>💾 Download</button>
+          </div>
+          <div className="legend-box">
+            <p>📍 <strong>What:</strong> All tokens stacked vertically showing full generation sequence</p>
+            <p>📐 <strong>Format:</strong> Each block of {generationResult.num_layers} rows = 1 token</p>
+            <p>📖 <strong>Read:</strong> Top → Bottom = First token → Last token generated</p>
+            <p>🎯 <strong>Interact:</strong> Click on any part to jump to that token</p>
           </div>
           <p className="timeline-description">
             Click on the timeline to jump to a specific token
@@ -371,7 +450,7 @@ function VisualizationPanel({ apiBaseUrl, generationResult }) {
               <span
                 key={idx}
                 className={`token-chip ${idx === currentTokenIndex ? 'active' : ''}`}
-                onClick={() => setCurrentTokenIndex(idx)}
+                onClick={() => handleTokenChipClick(idx)}
               >
                 {token}
               </span>
