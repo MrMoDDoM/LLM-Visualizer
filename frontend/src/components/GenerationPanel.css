@@ -102,7 +102,7 @@
 }
 
 .config-row label {
-  min-width: 120px;
+  min-width: 80px;
   color: #9ca3af;
   font-size: 0.9rem;
 }
@@ -113,11 +113,55 @@
   background: linear-gradient(to right, #667eea, #764ba2);
 }
 
+.layer-number-input {
+  width: 80px;
+  padding: 6px 10px;
+  background: #151933;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.layer-number-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.layer-range-info {
+  color: #6b7280;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
 .generate-button {
   width: 100%;
   padding: 15px;
   font-size: 1.1rem;
   margin-top: 10px;
+}
+
+.generate-button.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  transition: all 0.3s ease;
+}
+
+.generate-button.primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.generate-button.primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.generate-button.primary:disabled {
+  background: #374151;
+  box-shadow: none;
 }
 
 .reproducibility-section {

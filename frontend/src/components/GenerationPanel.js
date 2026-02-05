@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './GenerationPanel.css';
 
 function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationComplete, onError }) {
@@ -16,13 +16,32 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
   // Steering configurations
   const [steeringConfigs, setSteeringConfigs] = useState([]);
 
+  // Handle spacebar shortcut for generation
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      // Only trigger if spacebar is pressed and we're not in an input/textarea
+      if (e.code === 'Space' && 
+          !generating && 
+          prompt && 
+          e.target.tagName !== 'INPUT' && 
+          e.target.tagName !== 'TEXTAREA' &&
+          e.target.tagName !== 'SELECT') {
+        e.preventDefault();
+        handleGenerate();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [generating, prompt]); // Re-bind when these change
+
   const addSteeringConfig = () => {
     if (steeringVectors.length === 0) {
       alert('Please upload a steering vector first');
       return;
     }
     
-    const defaultLayer = Math.floor(modelInfo.num_layers / 2);
+    const defaultLayer = 16; // Default layer is now fixed at 16
     setSteeringConfigs([
       ...steeringConfigs,
       {
@@ -164,6 +183,18 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
         </div>
       </div>
 
+      {/* Generate Button - Always visible after sliders */}
+      <button
+        onClick={handleGenerate}
+        disabled={generating || !prompt}
+        className="generate-button primary"
+        title="Press spacebar to generate (when not in input field)"
+      >
+        {generating ? '⏳ Generating...' : '🚀 Generate (Space)'}
+      </button>
+
+      {error && <div className="error-message">❌ {error}</div>}
+
       {/* Reproducibility Controls */}
       <div className="reproducibility-section">
         <h3>🎲 Reproducibility Settings</h3>
@@ -226,9 +257,9 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
           <div className="reproducibility-info">
             <strong>ℹ️ For exact reproducibility:</strong>
             <ul>
-              <li>✓ Enable "Deterministic" mode (disables sampling)</li>
-              <li>✓ Use same prompt and parameters</li>
-              <li>✓ Optional: Fix seed for sampling mode (less deterministic)</li>
+              <li>Enable "Deterministic" mode (disables sampling)</li>
+              <li>Use same prompt and parameters</li>
+              <li>Optional: Fix seed for sampling mode (less deterministic)</li>
             </ul>
           </div>
         </div>
@@ -283,15 +314,19 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
                 </div>
 
                 <div className="config-row">
-                  <label>Layer: {config.layer}</label>
+                  <label>Layer:</label>
                   <input
-                    type="range"
+                    type="number"
                     min="0"
                     max={modelInfo.num_layers - 1}
                     value={config.layer}
-                    onChange={(e) => updateSteeringConfig(config.id, 'layer', parseInt(e.target.value))}
+                    onChange={(e) => updateSteeringConfig(config.id, 'layer', parseInt(e.target.value) || 0)}
                     disabled={generating}
+                    className="layer-number-input"
                   />
+                  <span className="layer-range-info">
+                    (0-{modelInfo.num_layers - 1})
+                  </span>
                 </div>
 
                 <div className="config-row">
@@ -311,16 +346,6 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
           </div>
         )}
       </div>
-
-      <button
-        onClick={handleGenerate}
-        disabled={generating || !prompt}
-        className="generate-button"
-      >
-        {generating ? '⏳ Generating...' : '🚀 Generate'}
-      </button>
-
-      {error && <div className="error-message">❌ {error}</div>}
     </div>
   );
 }
