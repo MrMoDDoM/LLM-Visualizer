@@ -25,9 +25,6 @@ body {
   padding: 20px 40px;
   color: white;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
 }
 
 .header-row {
@@ -41,22 +38,23 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 1;
-}
-
-.header-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
+  flex: 0 0 auto;
 }
 
 .header-right {
   display: flex;
   align-items: center;
   gap: 16px;
-  flex: 1;
-  justify-content: flex-end;
+  flex: 0 0 auto;
+}
+
+.model-info-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 8px 16px;
+  border-radius: 12px;
 }
 
 .App-header h1 {
@@ -181,57 +179,29 @@ body {
 .model-name {
   font-weight: 600;
   color: #fff;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 4px 12px;
-  border-radius: 12px;
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.current-token-display {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.15);
-  padding: 8px 20px;
-  border-radius: 12px;
-  font-size: 0.95rem;
-}
-
-.current-token-display .token-label {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.85rem;
-}
-
-.current-token-display .token-counter {
-  font-weight: 600;
-  color: #fbbf24;
-  font-family: 'Courier New', monospace;
-}
-
-.current-token-display .token-text {
-  font-weight: 600;
-  color: #fff;
-  font-family: 'Courier New', monospace;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 4px 12px;
-  border-radius: 6px;
+  font-size: 0.9rem;
 }
 
 .reset-button {
-  padding: 4px 12px;
-  font-size: 0.85rem;
-  background: #dc2626;
-  border: none;
-  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
   cursor: pointer;
+  font-size: 0.85rem;
   transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.reset-button:hover:not(:disabled) {
-  background: #b91c1c;
+.reset-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
 }
 
 .main-container {

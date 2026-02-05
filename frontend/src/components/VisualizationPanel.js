@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './VisualizationPanel.css';
 import SteeringRadarChart from './SteeringRadarChart';
+import NavigationControls from './NavigationControls';
 
-function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex, steeringConfigs, onCoefficientChange }) {
+function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex, onTokenChange, steeringConfigs, onCoefficientChange }) {
   // Remove internal token index management - now controlled by parent
   const [normalizationMode, setNormalizationMode] = useState('auto');
   const [vmin, setVmin] = useState(-1.0);
@@ -33,7 +34,7 @@ function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex, s
   const [embDragStart, setEmbDragStart] = useState({ x: 0, y: 0 });
   
   // Tab state for visualizations panel
-  const [activeTab, setActiveTab] = useState('hidden-states'); // 'hidden-states' or 'analysis'
+  const [activeTab, setActiveTab] = useState('hidden-states'); // 'hidden-states' or 'steering'
   
   const canvasRef = useRef(null);
   const embeddingCanvasRef = useRef(null);
@@ -235,9 +236,7 @@ function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex, s
   };
 
   const handleTokenChipClick = (tokenIndex) => {
-    if (window.updateTokenIndex) {
-      window.updateTokenIndex(tokenIndex);
-    }
+    onTokenChange(tokenIndex);
   };
 
   if (!generationResult) {
@@ -271,16 +270,32 @@ function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex, s
             🔥 Hidden States
           </button>
           <button
-            className={`viz-tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
-            onClick={() => setActiveTab('analysis')}
+            className={`viz-tab-button ${activeTab === 'steering' ? 'active' : ''}`}
+            onClick={() => setActiveTab('steering')}
           >
-            📊 Analysis
+            🎯 Steering
           </button>
         </div>
 
         {/* Tab Content */}
         {activeTab === 'hidden-states' ? (
           <div className="viz-tab-content">
+            {/* Current Token and Navigation Controls */}
+            <div className="token-navigation-section">
+              <div className="current-token-display">
+                <span className="token-label"><strong>Current Token:</strong></span>
+                <span className="token-counter">{currentTokenIndex + 1} / {generationResult.num_tokens_generated}</span>
+                <span className="token-text">"{generationResult.tokens[currentTokenIndex]}"</span>
+              </div>
+              
+              <NavigationControls
+                currentTokenIndex={currentTokenIndex}
+                totalTokens={generationResult.num_tokens_generated}
+                currentTokenText={generationResult.tokens[currentTokenIndex]}
+                onTokenChange={onTokenChange}
+              />
+            </div>
+
             {/* Token chips for navigation */}
             <div className="token-chips">
               {generationResult.tokens.map((token, idx) => (

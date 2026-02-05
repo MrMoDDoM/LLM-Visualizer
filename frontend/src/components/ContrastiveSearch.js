@@ -168,10 +168,15 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
       <div className="contrastive-header">
         <div className="header-content">
           <h2>🔍 Contrastive Activation Search</h2>
-          <p className="description">
-            Generate steering vectors by providing pairs of positive and negative examples.
-            The model will learn to distinguish between the two concepts.
-          </p>
+          <div className="info-section-inline">
+            <h4>ℹ️ How it works:</h4>
+            <ol>
+              <li><strong>Create pairs:</strong> Each pair should represent the same concept but with opposite sentiment/meaning</li>
+              <li><strong>Positive examples:</strong> Text that represents the desired behavior/concept</li>
+              <li><strong>Negative examples:</strong> Text that represents the opposite behavior/concept</li>
+              <li><strong>Generate:</strong> The algorithm will compute the difference in activations to create a steering vector</li>
+            </ol>
+          </div>
         </div>
         <div className="header-actions">
           <button onClick={exportDataset} className="export-button" disabled={generating}>
@@ -190,21 +195,21 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
         </div>
       </div>
 
-      <div className="vector-naming">
-        <label>Steering Vector Name:</label>
-        <input
-          type="text"
-          value={vectorName}
-          onChange={(e) => setVectorName(e.target.value)}
-          placeholder="e.g., positive_sentiment, honesty, creativity"
-          disabled={generating}
-          className="vector-name-input"
-        />
-      </div>
+      <div className="vector-config-section">
+        <div className="vector-naming">
+          <label>Steering Vector Name:</label>
+          <input
+            type="text"
+            value={vectorName}
+            onChange={(e) => setVectorName(e.target.value)}
+            placeholder="e.g., positive_sentiment, honesty, creativity"
+            disabled={generating}
+            className="vector-name-input"
+          />
+        </div>
 
-      <div className="layer-selection">
-        <label>Target Layer:</label>
-        <div className="layer-input-group">
+        <div className="layer-selection">
+          <label>Target Layer:</label>
           <input
             type="number"
             value={targetLayer === null ? '' : targetLayer}
@@ -226,6 +231,14 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
           </span>
         </div>
       </div>
+
+      <button
+        onClick={handleGenerate}
+        disabled={generating || contrastivePairs.length === 0 || !vectorName.trim()}
+        className="generate-vector-button"
+      >
+        {generating ? '⏳ Generating Steering Vector...' : '🚀 Generate Steering Vector'}
+      </button>
 
       <div className="dataset-container">
         <div className="dataset-header">
@@ -287,24 +300,6 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
           ))}
         </div>
       </div>
-
-      <div className="info-section">
-        <h4>ℹ️ How it works:</h4>
-        <ol>
-          <li><strong>Create pairs:</strong> Each pair should represent the same concept but with opposite sentiment/meaning</li>
-          <li><strong>Positive examples:</strong> Text that represents the desired behavior/concept</li>
-          <li><strong>Negative examples:</strong> Text that represents the opposite behavior/concept</li>
-          <li><strong>Generate:</strong> The algorithm will compute the difference in activations to create a steering vector</li>
-        </ol>
-      </div>
-
-      <button
-        onClick={handleGenerate}
-        disabled={generating || contrastivePairs.length === 0 || !vectorName.trim()}
-        className="generate-vector-button"
-      >
-        {generating ? '⏳ Generating Steering Vector...' : '🚀 Generate Steering Vector'}
-      </button>
 
       {error && <div className="error-message">❌ {error}</div>}
     </div>

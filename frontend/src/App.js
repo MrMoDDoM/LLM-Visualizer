@@ -220,6 +220,9 @@ function App() {
         <div className="header-row">
           <div className="header-left">
             <h1>🧠 LLM Hidden States Visualizer</h1>
+          </div>
+          
+          <div className="header-right">
             <div className="status-indicator">
               <span className={`status-dot ${apiStatus}`}></span>
               <span>API: {apiStatus}</span>
@@ -232,52 +235,32 @@ function App() {
                   ⚙️
                 </button>
               )}
-              {modelLoaded && (
-                <span className="model-name">
-                  <button className="reset-button" onClick={handleReset} title="Reset system">
-                    🔄
-                  </button>
-                  | Model: {modelInfo?.model_name}
-                </span>
-              )}
             </div>
-            {isEditingApi && (
-              <div className="api-config-expanded">
-                <label>API Endpoint:</label>
-                <input
-                  type="text"
-                  value={editingApiValue}
-                  onChange={(e) => setEditingApiValue(e.target.value)}
-                  className="api-input"
-                  placeholder="http://localhost:8000"
-                />
-                <button className="api-save-button" onClick={saveApiBaseUrl}>✓ Save</button>
-                <button className="api-cancel-button" onClick={() => { setIsEditingApi(false); setEditingApiValue(apiBaseUrl); }}>✗ Cancel</button>
+            {modelLoaded && (
+              <div className="model-info-header">
+                <span className="model-name">Model: {modelInfo?.model_name}</span>
+                <button className="reset-button" onClick={handleReset} title="Reset system">
+                  🔄 Reset
+                </button>
               </div>
-            )}
-          </div>
-          
-          <div className="header-center">
-            {generationResult && (
-              <div className="current-token-display">
-                <span className="token-label"><strong>Current Token:</strong></span>
-                <span className="token-counter">{currentTokenIndex + 1} / {generationResult.num_tokens_generated}</span>
-                <span className="token-text">"{generationResult.tokens[currentTokenIndex]}"</span>
-              </div>
-            )}
-          </div>
-          
-          <div className="header-right">
-            {generationResult && (
-              <NavigationControls
-                currentTokenIndex={currentTokenIndex}
-                totalTokens={generationResult.num_tokens_generated}
-                currentTokenText={generationResult.tokens[currentTokenIndex]}
-                onTokenChange={setCurrentTokenIndex}
-              />
             )}
           </div>
         </div>
+        
+        {isEditingApi && (
+          <div className="api-config-expanded">
+            <label>API Endpoint:</label>
+            <input
+              type="text"
+              value={editingApiValue}
+              onChange={(e) => setEditingApiValue(e.target.value)}
+              className="api-input"
+              placeholder="http://localhost:8000"
+            />
+            <button className="api-save-button" onClick={saveApiBaseUrl}>✓ Save</button>
+            <button className="api-cancel-button" onClick={() => { setIsEditingApi(false); setEditingApiValue(apiBaseUrl); }}>✗ Cancel</button>
+          </div>
+        )}
       </header>
 
       <div className="main-container">
@@ -299,7 +282,7 @@ function App() {
                 className={`tab-button ${activeTab === 'generation' ? 'active' : ''}`}
                 onClick={() => setActiveTab('generation')}
               >
-                🎯 Generation & Analysis
+                🎯 Generation & Steering
               </button>
               <button
                 className={`tab-button ${activeTab === 'contrastive' ? 'active' : ''}`}
@@ -340,6 +323,7 @@ function App() {
                       apiBaseUrl={apiBaseUrl}
                       generationResult={generationResult}
                       currentTokenIndex={currentTokenIndex}
+                      onTokenChange={setCurrentTokenIndex}
                       steeringConfigs={steeringConfigs}
                       onCoefficientChange={handleCoefficientChange}
                     />

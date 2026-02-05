@@ -141,13 +141,21 @@ async def root():
 
 @app.get("/status")
 async def get_status():
-    return {
+    status = {
         "model_loaded": model_state.model is not None,
         "model_name": model_state.model_name,
         "device": model_state.device,
         "cuda_available": torch.cuda.is_available(),
         "steering_vectors_count": len(model_state.steering_vectors)
     }
+    
+    # Add memory info if CUDA is available
+    if torch.cuda.is_available():
+        status["cuda_memory_allocated_mb"] = torch.cuda.memory_allocated() / 1024**2
+        status["cuda_memory_reserved_mb"] = torch.cuda.memory_reserved() / 1024**2
+        status["cuda_memory_cached_mb"] = torch.cuda.memory_cached() / 1024**2 if hasattr(torch.cuda, 'memory_cached') else 0
+    
+    return status
 
 @app.post("/reset")
 async def reset_all():
@@ -155,6 +163,21 @@ async def reset_all():
     try:
         # Clear model from memory
         if model_state.model is not None:
+            # Remove all forward hooks if any are still registered
+            try:
+                for module in model_state.model.modules():
+                    module._forward_hooks.clear()
+                    module._forward_pre_hooks.clear()
+                    module._backward_hooks.clear()
+            except Exception as e:
+                print(f"Warning: Could not clear hooks: {e}")
+            
+            # Move model to CPU before deleting to ensure VRAM is freed
+            try:
+                model_state.model.to('cpu')
+            except Exception as e:
+                print(f"Warning: Could not move model to CPU: {e}")
+            
             del model_state.model
             model_state.model = None
         
@@ -164,7 +187,13 @@ async def reset_all():
         
         model_state.model_name = None
         
-        # Clear steering vectors
+        # Clear steering vectors (which may hold tensors in GPU)
+        for vector_data in model_state.steering_vectors.values():
+            if "vector" in vector_data and torch.is_tensor(vector_data["vector"]):
+                try:
+                    vector_data["vector"] = vector_data["vector"].to('cpu')
+                except:
+                    pass
         model_state.steering_vectors.clear()
         
         # Clear generation cache
@@ -172,16 +201,21 @@ async def reset_all():
         model_state.tokens_cache.clear()
         model_state.embedding_cache.clear()
         
-        # Clear GPU cache if available
+        # Aggressive GPU cache clearing
         if torch.cuda.is_available():
+            import gc
+            gc.collect()
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
-        
-        # Clear CPU cache
-        import gc
-        gc.collect()
+            # Second pass for stubborn references
+            gc.collect()
+            torch.cuda.empty_cache()
+        else:
+            import gc
+            gc.collect()
         
         print("✅ System reset: all models and cache cleared")
+        print(f"   CUDA memory allocated: {torch.cuda.memory_allocated() / 1024**2:.2f} MB" if torch.cuda.is_available() else "   CPU mode")
         
         return {
             "success": True,

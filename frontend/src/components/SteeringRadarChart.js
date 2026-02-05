@@ -6,9 +6,9 @@ function SteeringRadarChart({ steeringConfigs, onCoefficientChange }) {
   const [draggingIndex, setDraggingIndex] = useState(null);
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
-  const centerX = 250;
-  const centerY = 250;
-  const maxRadius = 200;
+  const centerX = 300;
+  const centerY = 300;
+  const maxRadius = 240;
   const minValue = -10;
   const maxValue = 10;
 
@@ -218,18 +218,11 @@ function SteeringRadarChart({ steeringConfigs, onCoefficientChange }) {
 
   return (
     <div className="steering-radar-chart">
-      <div className="radar-header">
-        <h3>🎯 Steering Vector Coefficients</h3>
-        <p className="radar-description">
-          Drag the points to adjust coefficient values (range: -10 to +10). Double-click to reset to 0.
-        </p>
-      </div>
-      
       <div className="radar-container">
         <canvas
           ref={canvasRef}
-          width={500}
-          height={500}
+          width={600}
+          height={600}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -245,6 +238,13 @@ function SteeringRadarChart({ steeringConfigs, onCoefficientChange }) {
           <p className="empty-hint">Add steering vectors in the Generation Settings to visualize them here</p>
         </div>
       )}
+
+      <div className="radar-header">
+        <h3>🎯 Steering Vector Coefficients</h3>
+        <p className="radar-description">
+          Drag the points to adjust coefficient values (range: -10 to +10). Double-click to reset to 0.
+        </p>
+      </div>
 
       <div className="radar-legend">
         <div className="legend-item">

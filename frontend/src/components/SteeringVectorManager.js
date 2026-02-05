@@ -9,54 +9,76 @@ function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged, 
   const [normalizationMode, setNormalizationMode] = useState('auto');
   const [vmin, setVmin] = useState(-1.0);
   const [vmax, setVmax] = useState(1.0);
+  const [showModal, setShowModal] = useState(false);
+  
+  // Zoom and pan state for modal
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
 
-    if (!file.name.endsWith('.pt')) {
-      setError('Please upload a .pt file');
+    // Validate all files first
+    const invalidFiles = files.filter(file => !file.name.endsWith('.pt'));
+    if (invalidFiles.length > 0) {
+      setError(`Please upload only .pt files. Invalid: ${invalidFiles.map(f => f.name).join(', ')}`);
       return;
     }
 
     setUploading(true);
     setError(null);
 
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('name', file.name.replace('.pt', ''));
+    const results = {
+      success: [],
+      failed: []
+    };
 
-      const response = await fetch(`${apiBaseUrl}/upload_steering_vector`, {
-        method: 'POST',
-        body: formData,
-      });
+    // Upload files sequentially to avoid overwhelming the server
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('name', file.name.replace('.pt', ''));
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (onError) {
-          onError(errorData);
+        const response = await fetch(`${apiBaseUrl}/upload_steering_vector`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          results.failed.push({ name: file.name, error: errorData.detail || 'Upload failed' });
         } else {
-          throw new Error(errorData.detail || 'Upload failed');
+          await response.json();
+          results.success.push(file.name);
         }
-        return;
-      }
 
-      await response.json();
-      onVectorsChanged();
-      
-      // Clear file input
-      e.target.value = '';
-
-    } catch (err) {
-      if (onError) {
-        onError({ message: err.message, stacktrace: null });
-      } else {
-        setError(err.message);
+      } catch (err) {
+        results.failed.push({ name: file.name, error: err.message });
       }
-    } finally {
-      setUploading(false);
     }
+
+    // Show results summary
+    if (results.failed.length > 0) {
+      const errorMessage = `Uploaded ${results.success.length}/${files.length} files.\nFailed: ${results.failed.map(f => f.name).join(', ')}`;
+      if (onError) {
+        onError({ message: errorMessage, stacktrace: null });
+      } else {
+        setError(errorMessage);
+      }
+    }
+
+    // Refresh vectors list if at least one succeeded
+    if (results.success.length > 0) {
+      onVectorsChanged();
+    }
+    
+    // Clear file input
+    e.target.value = '';
+    setUploading(false);
   };
 
   const handleDeleteVector = async (name) => {
@@ -86,6 +108,9 @@ function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged, 
   };
 
   const handleVisualizeVector = async (name) => {
+    setSelectedVector(name);
+    setShowModal(true);
+    
     try {
       const normConfig = {
         mode: normalizationMode,
@@ -107,11 +132,54 @@ function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged, 
 
       const data = await response.json();
       setVectorImage(data.image);
-      setSelectedVector(name);
 
     } catch (err) {
       setError(err.message);
+      setShowModal(false);
     }
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedVector(null);
+    setVectorImage(null);
+    // Reset zoom and pan
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+  };
+
+  // Zoom and pan handlers
+  const zoomIn = () => {
+    setScale(prevScale => Math.min(prevScale * 1.2, 5));
+  };
+
+  const zoomOut = () => {
+    setScale(prevScale => Math.max(prevScale / 1.2, 0.5));
+  };
+
+  const handleMouseDown = (e) => {
+    if (e.button === 0) { // Left click only
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (isDragging) {
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const resetZoom = () => {
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
   };
 
   const handleDownloadVector = async (name) => {
@@ -153,6 +221,7 @@ function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged, 
           <input
             type="file"
             accept=".pt"
+            multiple
             onChange={handleFileUpload}
             disabled={uploading}
             style={{ display: 'none' }}
@@ -170,11 +239,8 @@ function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged, 
           <div className="vector-items">
             {steeringVectors.map(vector => (
               <div key={vector.name} className="vector-item">
-                <div className="vector-info">
+                <div className="vector-name">
                   <strong>{vector.name}</strong>
-                  <div className="vector-stats">
-                    Shape: [{vector.shape.join(', ')}] | Norm: {vector.norm.toFixed(4)}
-                  </div>
                 </div>
                 <div className="vector-actions">
                   <button
@@ -205,60 +271,117 @@ function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged, 
         )}
       </div>
 
-      {vectorImage && selectedVector && (
-        <div className="vector-visualization">
-          <h3>Vector Preview: {selectedVector}</h3>
-          
-          <div className="normalization-controls">
-            <label>
-              <input
-                type="radio"
-                value="auto"
-                checked={normalizationMode === 'auto'}
-                onChange={() => setNormalizationMode('auto')}
-              />
-              Auto
-            </label>
-            <label>
-              <input
-                type="radio"
-                value="fixed"
-                checked={normalizationMode === 'fixed'}
-                onChange={() => setNormalizationMode('fixed')}
-              />
-              Fixed
-            </label>
-            
-            {normalizationMode === 'fixed' && (
-              <div className="range-inputs">
+      {/* Modal for vector visualization */}
+      {showModal && (
+        <div className="vector-modal-overlay" onClick={closeModal}>
+          <div className="vector-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>👁️ Vector Preview: {selectedVector}</h3>
+              <button className="modal-close-button" onClick={closeModal}>✕</button>
+            </div>
+
+            <div className="normalization-controls">
+              <label>
                 <input
-                  type="number"
-                  value={vmin}
-                  onChange={(e) => setVmin(parseFloat(e.target.value))}
-                  step="0.1"
-                  placeholder="Min"
+                  type="radio"
+                  value="auto"
+                  checked={normalizationMode === 'auto'}
+                  onChange={() => setNormalizationMode('auto')}
                 />
+                Auto
+              </label>
+              <label>
                 <input
-                  type="number"
-                  value={vmax}
-                  onChange={(e) => setVmax(parseFloat(e.target.value))}
-                  step="0.1"
-                  placeholder="Max"
+                  type="radio"
+                  value="fixed"
+                  checked={normalizationMode === 'fixed'}
+                  onChange={() => setNormalizationMode('fixed')}
                 />
+                Fixed
+              </label>
+              
+              {normalizationMode === 'fixed' && (
+                <div className="range-inputs">
+                  <input
+                    type="number"
+                    value={vmin}
+                    onChange={(e) => setVmin(parseFloat(e.target.value))}
+                    step="0.1"
+                    placeholder="Min"
+                  />
+                  <input
+                    type="number"
+                    value={vmax}
+                    onChange={(e) => setVmax(parseFloat(e.target.value))}
+                    step="0.1"
+                    placeholder="Max"
+                  />
+                </div>
+              )}
+              
+              <button onClick={() => handleVisualizeVector(selectedVector)}>
+                🔄 Refresh
+              </button>
+            </div>
+
+            {/* Zoom Controls */}
+            <div className="zoom-controls">
+              <button onClick={zoomOut} title="Zoom Out" disabled={scale <= 0.5}>
+                🔍− Zoom Out
+              </button>
+              <button onClick={resetZoom} title="Reset zoom">
+                ⊙ Reset
+              </button>
+              <button onClick={zoomIn} title="Zoom In" disabled={scale >= 5}>
+                🔍+ Zoom In
+              </button>
+            </div>
+
+            {/* Vector Info Box */}
+            {steeringVectors.find(v => v.name === selectedVector) && (
+              <div className="modal-vector-info">
+                <div className="info-item">
+                  <strong>Shape:</strong> [{steeringVectors.find(v => v.name === selectedVector).shape.join(', ')}]
+                </div>
+                <div className="info-item">
+                  <strong>Norm:</strong> {steeringVectors.find(v => v.name === selectedVector).norm.toFixed(6)}
+                </div>
+                <div className="info-item">
+                  <strong>Zoom:</strong> {(scale * 100).toFixed(0)}%
+                </div>
               </div>
             )}
-            
-            <button onClick={() => handleVisualizeVector(selectedVector)}>
-              🔄 Refresh
-            </button>
-          </div>
 
-          <div className="vector-image-container">
-            <img
-              src={`data:image/png;base64,${vectorImage}`}
-              alt="Steering Vector"
-              style={{ width: '100%', height: 'auto', imageRendering: 'pixelated' }}
-            />
+            <div 
+              className="vector-image-container"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+            >
+              {vectorImage ? (
+                <div style={{ 
+                  transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                  transformOrigin: 'center center',
+                  transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+                }}>
+                  <img
+                    src={`data:image/png;base64,${vectorImage}`}
+                    alt="Steering Vector"
+                    style={{ 
+                      width: '100%', 
+                      height: 'auto', 
+                      imageRendering: 'pixelated',
+                      pointerEvents: 'none',
+                      userSelect: 'none'
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="loading-message">Loading visualization...</div>
+              )}
+            </div>
           </div>
         </div>
       )}
