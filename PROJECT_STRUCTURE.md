@@ -1,248 +1,313 @@
-# 📁 Struttura del Progetto
+# 📁 Project Structure
 
 ```
 llm-hidden-states-visualizer/
 │
-├── backend/                          # Backend Python (FastAPI + PyTorch)
-│   ├── main.py                       # Server FastAPI principale
-│   ├── generate_steering_vector.py   # Script per generare steering vectors
-│   ├── requirements.txt              # Dipendenze Python
-│   ├── Dockerfile                    # Container Docker backend
-│   └── venv/                         # Virtual environment (creato automaticamente)
+├── backend/                          # Python Backend (FastAPI + PyTorch)
+│   ├── main.py                       # Main FastAPI server
+│   ├── generate_steering_vector.py   # Script to generate steering vectors
+│   ├── requirements.txt              # Python dependencies
+│   ├── Dockerfile                    # Backend Docker container
+│   ├── Preset/                       # Preset collections folder
+│   │   ├── README.md                 # Preset system documentation
+│   │   ├── EmotionalIntelligence/    # Example preset
+│   │   └── CognitiveSkills/          # Example preset
+│   └── venv/                         # Virtual environment (auto-created)
 │
-├── frontend/                         # Frontend React
+├── frontend/                         # React Frontend
 │   ├── src/
-│   │   ├── App.js                    # Componente principale
-│   │   ├── App.css                   # Stili globali
-│   │   ├── index.js                  # Entry point React
-│   │   ├── index.css                 # Stili di base
-│   │   └── components/               # Componenti React
-│   │       ├── ModelLoader.js        # Caricamento modelli
+│   │   ├── App.js                    # Main component
+│   │   ├── App.css                   # Global styles
+│   │   ├── index.js                  # React entry point
+│   │   ├── index.css                 # Base styles
+│   │   └── components/               # React components
+│   │       ├── ModelLoader.js        # Model loading
 │   │       ├── ModelLoader.css
-│   │       ├── GenerationPanel.js    # Pannello generazione testo
+│   │       ├── GenerationPanel.js    # Text generation panel
 │   │       ├── GenerationPanel.css
-│   │       ├── VisualizationPanel.js # Visualizzazioni e timeline
+│   │       ├── VisualizationPanel.js # Visualizations and timeline
 │   │       ├── VisualizationPanel.css
-│   │       ├── SteeringVectorManager.js  # Gestione steering vectors
-│   │       └── SteeringVectorManager.css
+│   │       ├── SteeringVectorManager.js  # Steering vector management
+│   │       ├── SteeringVectorManager.css
+│   │       ├── ContrastiveSearch.js  # Contrastive search interface
+│   │       ├── ContrastiveSearch.css
+│   │       ├── SteeringRadarChart.js # Radar chart for coefficients
+│   │       └── NavigationControls.js # Navigation controls
 │   ├── public/
 │   │   └── index.html                # HTML template
-│   ├── package.json                  # Dipendenze Node.js
-│   ├── Dockerfile                    # Container Docker frontend
-│   └── node_modules/                 # Dipendenze installate
+│   ├── package.json                  # Node.js dependencies
+│   ├── Dockerfile                    # Frontend Docker container
+│   └── node_modules/                 # Installed dependencies
 │
-├── README.md                         # Documentazione completa
-├── QUICKSTART.md                     # Guida rapida 5 minuti
-├── TUTORIAL.md                       # Tutorial ed esempi
-├── .gitignore                        # File da ignorare in Git
-├── start.sh                          # Script di avvio rapido
-└── docker-compose.yml                # Orchestrazione Docker
+├── README.md                         # Complete documentation
+├── PROJECT_STRUCTURE.md              # This file
+├── TUTORIAL.md                       # Tutorial and examples
+├── PRESET_SYSTEM.md                  # Preset system documentation
+├── QUICKSTART.md                     # 5-minute quick guide
+├── .gitignore                        # Files to ignore in Git
+├── start.sh                          # Quick start script
+└── docker-compose.yml                # Docker orchestration
 
 ```
 
-## 🎯 File Principali
+## 🎯 Main Files
 
 ### Backend
 
-**`main.py`** (482 linee)
-- Server FastAPI completo
-- Endpoints per tutte le operazioni:
-  - `/load_model` - Carica modelli HuggingFace
-  - `/generate` - Genera testo con steering opzionale
-  - `/visualize_token` - Crea heatmap per token specifico
-  - `/visualize_timeline` - Crea timeline completa
-  - `/upload_steering_vector` - Upload vettori di steering
-  - `/visualize_steering_vector` - Visualizza steering vectors
-- Gestione hidden states con hooks PyTorch
-- Applicazione steering tramite forward hooks
-- Creazione heatmap con matplotlib colormap
+**`main.py`** (900+ lines)
+- Complete FastAPI server
+- Endpoints for all operations:
+  - `/load_model` - Load HuggingFace models
+  - `/generate` - Generate text with optional steering
+  - `/visualize_token` - Create heatmap for specific token
+  - `/visualize_timeline` - Create complete timeline
+  - `/upload_steering_vector` - Upload steering vectors
+  - `/visualize_steering_vector` - Visualize steering vectors
+  - `/contrastive_search` - Contrastive Activation Addition
+  - `/presets` - List available presets
+  - `/execute_preset` - Execute preset batch processing
+- Hidden states management with PyTorch hooks
+- Steering application via forward hooks
+- Heatmap creation with matplotlib colormap
 
-**`generate_steering_vector.py`** (189 linee)
-- Script standalone per CAA (Contrastive Activation Addition)
-- Prompt preconfigurati per: formality, positivity, conciseness
-- Estrazione hidden states da layer specifici
-- Averaging e normalizzazione
-- Salvataggio in formato .pt
+**`generate_steering_vector.py`** (189 lines)
+- Standalone script for CAA (Contrastive Activation Addition)
+- Preconfigured prompts for: formality, positivity, conciseness
+- Hidden states extraction from specific layers
+- Averaging and normalization
+- Save in .pt format
 
 **`requirements.txt`**
-- FastAPI + Uvicorn per API server
-- PyTorch per inferenza
-- Transformers (HuggingFace) per modelli
-- Pillow per immagini
-- Matplotlib per colormaps
+- FastAPI + Uvicorn for API server
+- PyTorch for inference
+- Transformers (HuggingFace) for models
+- Pillow for images
+- Matplotlib for colormaps
+
+**`Preset/` folder**
+- Preset collections for batch processing
+- Each subfolder = one preset
+- JSON dataset files with metadata
+- Example presets: EmotionalIntelligence, CognitiveSkills
 
 ### Frontend
 
-**`App.js`** (75 linee)
-- Componente root React
-- Gestione stato globale (modello, generazione, steering vectors)
-- Layout responsive a 2 colonne
-- Comunicazione con API backend
+**`App.js`** (361 lines)
+- Root React component
+- Global state management (model, generation, steering vectors)
+- Responsive 2-column layout
+- Communication with backend API
+- State lifting for steering configs
 
-**`ModelLoader.js`** (95 linee)
-- Selezione modello da preset o custom
-- UI per caricamento con feedback
-- Gestione errori di caricamento
+**`ModelLoader.js`** (95 lines)
+- Model selection from presets or custom
+- Loading UI with feedback
+- Loading error handling
 
-**`GenerationPanel.js`** (145 linee)
-- Form per prompt e parametri di generazione
-- Gestione steering configurations
-- Sliders per temperature, top-k, top-p
-- Controllo multi-layer steering
+**`GenerationPanel.js`** (145 lines)
+- Form for prompt and generation parameters
+- Steering configurations management
+- Sliders for temperature, top-k, top-p
+- Multi-layer steering control
 
-**`VisualizationPanel.js`** (235 linee)
-- Visualizzazione principale hidden states
-- Timeline con miniatura clickable
-- Zoom/pan con mouse
-- Navigazione token-by-token
-- Download immagini
-- Visualizzazione embedding
+**`VisualizationPanel.js`** (235 lines)
+- Main hidden states visualization
+- Timeline with clickable miniature
+- Zoom/pan with mouse
+- Token-by-token navigation
+- Image downloads
+- Embedding visualization
 
-**`SteeringVectorManager.js`** (128 linee)
+**`SteeringVectorManager.js`** (405 lines)
 - Upload steering vectors (.pt files)
-- Lista vettori caricati con stats
-- Visualizzazione heatmap vettori
-- Delete vettori
+- Multi-file upload support
+- List loaded vectors with stats
+- Vector heatmap visualization in modal
+- Zoom/pan controls for vector visualization
+- Delete vectors
 
-### Documentazione
+**`ContrastiveSearch.js`** (508 lines)
+- Contrastive Activation Addition interface
+- Dataset management (pairs of positive/negative texts)
+- Export/import datasets with metadata
+- Preset manager for batch processing
+- Progress indicator for multiple generations
+- Vector generation from contrastive pairs
 
-**`README.md`** (450+ linee)
-- Documentazione completa del progetto
-- Guida installazione dettagliata
-- Spiegazione architettura
+**`SteeringRadarChart.js`** (264 lines)
+- Interactive radar chart for coefficients
+- Drag-and-drop point manipulation
+- Visual representation of steering intensity
+- Double-click to reset coefficient to 0
+- Scale from -10 to +10
+
+**`NavigationControls.js`** (80 lines)
+- Token navigation controls
+- Previous/next buttons
+- Direct token selection
+
+### Documentation
+
+**`README.md`** (450+ lines)
+- Complete project documentation
+- Detailed installation guide
+- Architecture explanation
 - API reference
-- Use cases ed esempi
+- Use cases and examples
 - Troubleshooting
-- Roadmap future features
+- Future features roadmap
 
-**`QUICKSTART.md`** (80 linee)
-- Setup in 5 minuti
-- Primo utilizzo passo-passo
-- Troubleshooting veloce
-- Esempi rapidi
+**`PROJECT_STRUCTURE.md`** (This file)
+- Detailed file structure
+- Component descriptions
+- Technology stack
+- Code navigation guide
 
-**`TUTORIAL.md`** (300+ linee)
-- 5 esperimenti guidati
-- Analisi pattern di ragionamento
-- Steering per controllo
+**`TUTORIAL.md`** (300+ lines)
+- 5 guided experiments
+- Reasoning pattern analysis
+- Steering for control
 - Multi-layer steering
-- Debugging comportamento
-- Esercizi avanzati
+- Behavior debugging
+- Advanced exercises
 
-## 🔧 Script di Utilità
+**`PRESET_SYSTEM.md`** (150+ lines)
+- Preset system overview
+- Backend API documentation
+- Frontend UI guide
+- Example presets
+- Usage instructions
+
+**`QUICKSTART.md`** (80 lines)
+- 5-minute setup
+- First use step-by-step
+- Quick troubleshooting
+- Quick examples
+
+## 🔧 Utility Scripts
 
 **`start.sh`**
-- Avvia backend e frontend automaticamente
-- Crea virtual env se necessario
-- Installa dipendenze se mancanti
-- Gestione graceful shutdown
-- Output colorato e informativo
+- Automatically starts backend and frontend
+- Creates virtual env if needed
+- Installs missing dependencies
+- Graceful shutdown handling
+- Colorful and informative output
 
 ## 🐳 Docker Support
 
 **`docker-compose.yml`**
-- Orchestrazione completa
-- Support GPU per backend
-- Networking automatico
-- Volumes per cache modelli
-- Hot reload per sviluppo
+- Complete orchestration
+- GPU support for backend
+- Automatic networking
+- Volumes for model cache
+- Hot reload for development
 
 **`backend/Dockerfile`**
-- Base Python 3.10
-- Installazione dipendenze ottimizzata
-- Port 8000 esposto
+- Python 3.10 base
+- Optimized dependency installation
+- Port 8000 exposed
 
 **`frontend/Dockerfile`**
-- Base Node 18 Alpine
-- Build ottimizzato
-- Port 3000 esposto
+- Node 18 Alpine base
+- Optimized build
+- Port 3000 exposed
 
-## 📊 Dimensioni Stimate
+## 📊 Estimated Sizes
 
-- **Backend codebase**: ~700 linee Python
-- **Frontend codebase**: ~1000 linee JavaScript/React
-- **CSS**: ~800 linee
-- **Documentazione**: ~1000 linee
-- **Total LOC**: ~3500 linee
+- **Backend codebase**: ~1200 lines Python
+- **Frontend codebase**: ~2000 lines JavaScript/React
+- **CSS**: ~1500 lines
+- **Documentation**: ~1500 lines
+- **Total LOC**: ~6200 lines
 
-## 🎨 Tecnologie Utilizzate
+## 🎨 Technologies Used
 
 ### Backend
-- **FastAPI**: Framework web moderno e veloce
+- **FastAPI**: Modern and fast web framework
 - **PyTorch**: Deep learning framework
-- **Transformers**: Libreria HuggingFace per LLM
-- **Matplotlib**: Generazione colormaps
-- **Pillow**: Manipolazione immagini
+- **Transformers**: HuggingFace library for LLMs
+- **Matplotlib**: Colormap generation
+- **Pillow**: Image manipulation
 - **Uvicorn**: ASGI server
 
 ### Frontend
 - **React 18**: UI framework
-- **React Hooks**: State management moderno
+- **React Hooks**: Modern state management
 - **Fetch API**: HTTP requests
-- **CSS3**: Styling moderno con gradients
-- **Canvas API**: Manipolazione immagini (timeline)
+- **CSS3**: Modern styling with gradients
+- **Canvas API**: Image manipulation (timeline)
 
 ### DevOps
 - **Docker**: Containerization
 - **Docker Compose**: Multi-container orchestration
-- **Bash**: Scripts di automazione
+- **Bash**: Automation scripts
 - **Git**: Version control
 
-## 🚀 Features Implementate
+## 🚀 Implemented Features
 
-✅ **Visualizzazione**
-- Heatmap hidden states per token
-- Timeline completa generazione
+✅ **Visualization**
+- Hidden states heatmaps per token
+- Complete generation timeline
 - Embedding visualization
-- Zoom/pan interattivo
-- Download immagini
+- Interactive zoom/pan
+- Image downloads
 
-✅ **Generazione**
-- Supporto multi-modello
-- Parametri configurabili (temp, top-k, top-p)
+✅ **Generation**
+- Multi-model support
+- Configurable parameters (temp, top-k, top-p)
 - Real-time generation
 - Token-by-token tracking
 
 ✅ **Steering**
 - Upload custom vectors
 - Multi-layer application
-- Coefficient control
+- Coefficient control with radar chart
 - Enable/disable on-the-fly
-- Vector visualization
+- Vector visualization in modal
+- Multi-file upload
+
+✅ **Contrastive Search**
+- Dataset creation and management
+- Export/import with metadata
+- Automatic vector generation
+- Preset system for batch processing
+- Progress tracking
 
 ✅ **UI/UX**
-- Interfaccia moderna e responsive
+- Modern and responsive interface
 - Dark theme
-- Feedback visivo
+- Visual feedback
 - Error handling
 - Loading states
+- Modal popups
 
-✅ **Documentazione**
-- README completo
+✅ **Documentation**
+- Complete README
 - Quick start guide
-- Tutorial dettagliato
+- Detailed tutorial
 - API reference
-- Esempi pratici
+- Practical examples
+- Preset system guide
 
-## 💡 Come Navigare il Codice
+## 💡 How to Navigate the Code
 
-### Per aggiungere un nuovo endpoint backend:
+### To add a new backend endpoint:
 
-1. Aggiungi la funzione in `backend/main.py`
-2. Definisci i Pydantic models per request/response
-3. Implementa la logica
-4. Testa con curl o Postman
-5. Integra nel frontend
+1. Add function in `backend/main.py`
+2. Define Pydantic models for request/response
+3. Implement logic
+4. Test with curl or Postman
+5. Integrate in frontend
 
-### Per aggiungere un nuovo componente frontend:
+### To add a new frontend component:
 
-1. Crea file in `frontend/src/components/`
-2. Importa in `App.js`
-3. Aggiungi CSS corrispondente
-4. Gestisci stato con hooks
-5. Connetti alle API
+1. Create file in `frontend/src/components/`
+2. Import in `App.js`
+3. Add corresponding CSS
+4. Manage state with hooks
+5. Connect to APIs
 
-### Per debuggare:
+### For debugging:
 
 **Backend:**
 ```bash
@@ -259,16 +324,17 @@ npm start
 # Check browser console (F12)
 ```
 
-## 🎓 Prossimi Passi Suggeriti
+## 🎓 Suggested Next Steps
 
-1. **Inizia con QUICKSTART.md** per setup rapido
-2. **Leggi README.md** per comprensione completa
-3. **Segui TUTORIAL.md** per imparare le funzionalità
-4. **Sperimenta** con modelli e steering vectors
-5. **Contribuisci** con miglioramenti e nuove features
+1. **Start with QUICKSTART.md** for quick setup
+2. **Read README.md** for complete understanding
+3. **Follow TUTORIAL.md** to learn features
+4. **Experiment** with models and steering vectors
+5. **Explore PRESET_SYSTEM.md** for batch processing
+6. **Contribute** with improvements and new features
 
 ---
 
-**Il progetto è pronto per l'uso! 🎉**
+**The project is ready to use! 🎉**
 
-Esegui `./start.sh` per iniziare!
+Run `./start.sh` to begin!

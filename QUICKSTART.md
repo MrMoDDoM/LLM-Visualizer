@@ -1,10 +1,10 @@
-# 🚀 Guida Rapida - LLM Hidden States Visualizer
+# 🚀 Quick Start - LLM Hidden States Visualizer
 
-Guida veloce per iniziare in 5 minuti!
+Quick guide to get started in 5 minutes!
 
-## Setup Rapido
+## Quick Setup
 
-### 1. Backend (Terminale 1)
+### 1. Backend (Terminal 1)
 
 ```bash
 cd backend
@@ -14,9 +14,9 @@ pip install -r requirements.txt
 python main.py
 ```
 
-✅ Vedrai: `Uvicorn running on http://0.0.0.0:8000`
+✅ You'll see: `Uvicorn running on http://0.0.0.0:8000`
 
-### 2. Frontend (Terminale 2)
+### 2. Frontend (Terminal 2)
 
 ```bash
 cd frontend
@@ -24,69 +24,69 @@ npm install
 npm start
 ```
 
-✅ Si aprirà automaticamente `http://localhost:3000`
+✅ Will automatically open `http://localhost:3000`
 
-## Primo Utilizzo
+## First Use
 
-### Step 1: Carica un Modello
+### Step 1: Load a Model
 
-1. Scegli "GPT-2 (Small)" dalla lista (veloce per testare)
-2. Clicca **Load Model**
-3. Attendi il download (~500MB)
+1. Choose "GPT-2 (Small)" from the list (fast for testing)
+2. Click **Load Model**
+3. Wait for download (~500MB)
 
-### Step 2: Genera Testo
+### Step 2: Generate Text
 
-1. Lascia il prompt di default: `"Tell me a short story about a robot."`
-2. Imposta **Max Tokens = 15**
-3. Clicca **🚀 Generate**
+1. Leave the default prompt: `"Tell me a short story about a robot."`
+2. Set **Max Tokens = 15**
+3. Click **🚀 Generate**
 
-### Step 3: Esplora le Visualizzazioni
+### Step 3: Explore Visualizations
 
-- Usa **◀ / ▶** per navigare tra i token
-- Fai **zoom** con la rotella del mouse
-- Clicca sulla **timeline** per saltare a un token specifico
-- Scarica le immagini con **💾 Download**
+- Use **◀ / ▶** to navigate between tokens
+- **Zoom** with mouse wheel
+- Click on **timeline** to jump to a specific token
+- Download images with **💾 Download**
 
-## Prova Steering Vectors
+## Try Steering Vectors
 
-### Genera un Vettore di Test
+### Generate a Test Vector
 
 ```bash
 cd backend
 python generate_steering_vector.py --model gpt2 --behavior formality --output formality_gpt2.pt
 ```
 
-### Applica il Vettore
+### Apply the Vector
 
-1. Nel pannello **Steering Vector Library**, clicca **📁 Upload Vector**
-2. Seleziona `formality_gpt2.pt`
-3. Nel pannello **Generation Settings**, clicca **+ Add Steering**
-4. Regola **Coefficient** a `2.0`
-5. Genera nuovamente e confronta!
+1. In **Steering Vector Library** panel, click **📁 Upload Vector**
+2. Select `formality_gpt2.pt`
+3. In **Generation Settings** panel, click **+ Add Steering**
+4. Adjust **Coefficient** to `2.0`
+5. Generate again and compare!
 
-## Troubleshooting Veloce
+## Quick Troubleshooting
 
-**🔴 Backend non si avvia?**
+**🔴 Backend won't start?**
 ```bash
 pip install --upgrade fastapi uvicorn torch transformers
 ```
 
-**🔴 Frontend non si connette?**
-- Verifica che backend sia su porta 8000
-- Controlla CORS nel browser console
+**🔴 Frontend won't connect?**
+- Verify backend is on port 8000
+- Check CORS in browser console
 
 **🔴 Out of Memory?**
-- Usa GPT-2 invece di modelli grandi
-- Riduci max_tokens
-- Chiudi altre applicazioni
+- Use GPT-2 instead of large models
+- Reduce max_tokens
+- Close other applications
 
-**🔴 Modello non trovato?**
-- Verifica nome su https://huggingface.co/models
-- Per LLaMA: `huggingface-cli login`
+**🔴 Model not found?**
+- Verify name on https://huggingface.co/models
+- For LLaMA: `huggingface-cli login`
 
-## Esempi Rapidi
+## Quick Examples
 
-### Prompt Interessanti per Visualizzazione
+### Interesting Prompts for Visualization
 
 ```
 "Let's count from 1 to 5:"
@@ -95,20 +95,21 @@ pip install --upgrade fastapi uvicorn torch transformers
 "Q: What is 2+2? A:"
 ```
 
-### Esperimenti con Steering
+### Experiments with Steering
 
-1. **Formality**: Genera "Hey dude!" vs con formality steering
-2. **Positivity**: Genera story triste vs con positivity steering
-3. **Multi-Layer**: Applica lo stesso vettore a layer 8 e 16 simultaneamente
+1. **Formality**: Generate "Hey dude!" vs with formality steering
+2. **Positivity**: Generate sad story vs with positivity steering
+3. **Multi-Layer**: Apply same vector to layers 8 and 16 simultaneously
 
-## Risorse Utili
+## Useful Resources
 
-- 📖 [README Completo](README.md)
-- 🎓 [Tutorial Steering Vectors](#)
+- 📖 [Complete README](README.md)
+- 🎓 [Steering Vectors Tutorial](TUTORIAL.md)
+- 📦 [Preset System Guide](backend/Preset/README.md)
 - 💬 [Report Issues](https://github.com/...)
 
 ---
 
-**Tempo totale setup: ~5-10 minuti** ⏱️
+**Total setup time: ~5-10 minutes** ⏱️
 
-Buon divertimento! 🎉
+Have fun! 🎉

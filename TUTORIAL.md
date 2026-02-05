@@ -1,24 +1,24 @@
-# 📚 Tutorial: Analisi dei Pattern di Ragionamento in LLM
+# 📚 Tutorial: Analyzing Reasoning Patterns in LLMs
 
-Questo tutorial ti guida attraverso un'analisi completa dei pattern di hidden states durante diverse tipologie di ragionamento.
+This tutorial guides you through a comprehensive analysis of hidden state patterns during different types of reasoning.
 
-## Obiettivo
+## Objective
 
-Comprendere come gli hidden states evolvono durante:
-1. Ragionamento matematico
-2. Generazione creativa
-3. Recupero di conoscenza fattuale
+Understand how hidden states evolve during:
+1. Mathematical reasoning
+2. Creative generation
+3. Factual knowledge retrieval
 
 ## Setup
 
 ```python
-# Carica il modello nell'interfaccia web
-# Usa: meta-llama/Llama-3.2-1B-Instruct
+# Load the model in the web interface
+# Use: meta-llama/Llama-3.2-1B-Instruct
 ```
 
-## Esperimento 1: Ragionamento Matematico
+## Experiment 1: Mathematical Reasoning
 
-### Step 1: Genera senza steering
+### Step 1: Generate without steering
 
 **Prompt:**
 ```
@@ -26,66 +26,66 @@ Q: What is 127 + 384?
 A: Let me solve this step by step.
 ```
 
-**Parametri:**
+**Parameters:**
 - Max Tokens: 30
 - Temperature: 0.7
 - No steering
 
-**Cosa osservare:**
-1. Nei primi layer (0-5): pattern lessicali dei numeri
-2. Nei layer medi (6-15): costruzione della soluzione
-3. Negli ultimi layer (16+): selezione del token finale
+**What to observe:**
+1. In early layers (0-5): lexical patterns of numbers
+2. In middle layers (6-15): solution construction
+3. In final layers (16+): final token selection
 
-**Pattern attesi:**
-- Attivazioni forti nelle dimensioni associate ai numeri
-- Graduale transizione verso rappresentazioni più astratte
-- Convergenza verso la risposta nei layer finali
+**Expected patterns:**
+- Strong activations in dimensions associated with numbers
+- Gradual transition toward more abstract representations
+- Convergence toward answer in final layers
 
-### Step 2: Confronta token chiave
+### Step 2: Compare key tokens
 
-Naviga token per token e confronta:
-- Token "127": rappresentazione numerica iniziale
-- Token "step": attivazione del meccanismo di ragionamento
-- Token con il risultato: convergenza della soluzione
+Navigate token by token and compare:
+- Token "127": initial numerical representation
+- Token "step": activation of reasoning mechanism
+- Token with result: solution convergence
 
-**Domande:**
-- Quali dimensioni cambiano di più tra questi token?
-- A quale layer avviene il "salto" verso la soluzione?
+**Questions:**
+- Which dimensions change the most between these tokens?
+- At which layer does the "jump" toward the solution occur?
 
-## Esperimento 2: Creatività vs Fatti
+## Experiment 2: Creativity vs Facts
 
-### Test A: Fatto storico
+### Test A: Historical fact
 
 **Prompt:**
 ```
 The capital of France is
 ```
 
-**Cosa aspettarsi:**
-- Risposta deterministica ("Paris")
-- Pattern molto stabili attraverso i layer
-- Minima varianza nelle attivazioni
+**What to expect:**
+- Deterministic answer ("Paris")
+- Very stable patterns across layers
+- Minimal variance in activations
 
-### Test B: Completamento creativo
+### Test B: Creative completion
 
 **Prompt:**
 ```
 Once upon a time, in a magical forest,
 ```
 
-**Cosa aspettarsi:**
-- Maggiore varianza nelle attivazioni
-- Pattern meno deterministici
-- Maggiore "esplorazione" nello spazio degli hidden states
+**What to expect:**
+- Greater variance in activations
+- Less deterministic patterns
+- More "exploration" in hidden states space
 
-**Confronto:**
-Usa normalizzazione "Fixed Range" con gli stessi vmin/vmax per confrontare:
-- La varianza è maggiore nel caso creativo?
-- Quali layer mostrano le maggiori differenze?
+**Comparison:**
+Use "Fixed Range" normalization with same vmin/vmax to compare:
+- Is variance greater in the creative case?
+- Which layers show the biggest differences?
 
-## Esperimento 3: Steering per Controllo
+## Experiment 3: Steering for Control
 
-### Step 1: Genera steering vector di conciseness
+### Step 1: Generate conciseness steering vector
 
 ```bash
 cd backend
@@ -95,183 +95,183 @@ python generate_steering_vector.py \
     --output concise_vector.pt
 ```
 
-### Step 2: Test senza steering
+### Step 2: Test without steering
 
 **Prompt:**
 ```
 Explain photosynthesis.
 ```
 
-**Parametri:**
+**Parameters:**
 - Max Tokens: 50
 - Temperature: 1.0
 
-**Risultato atteso:** Spiegazione verbosa
+**Expected result:** Verbose explanation
 
-### Step 3: Test con steering
+### Step 3: Test with steering
 
-**Applica steering:**
+**Apply steering:**
 - Vector: concise_vector
-- Layer: 8 (layer medio)
+- Layer: 8 (middle layer)
 - Coefficient: 2.5
 
-**Risultato atteso:** Spiegazione più concisa
+**Expected result:** More concise explanation
 
-### Step 4: Analisi comparativa
+### Step 4: Comparative analysis
 
-**Crea due visualizzazioni:**
-1. Timeline completa senza steering
-2. Timeline completa con steering
+**Create two visualizations:**
+1. Complete timeline without steering
+2. Complete timeline with steering
 
-**Confronta:**
-- Quali dimensioni cambiano di più?
-- Il cambiamento è uniforme su tutti i layer o concentrato?
-- Come cambia la distribuzione dei valori?
+**Compare:**
+- Which dimensions change the most?
+- Is the change uniform across all layers or concentrated?
+- How does the value distribution change?
 
-## Esperimento 4: Multi-Layer Steering
+## Experiment 4: Multi-Layer Steering
 
-### Ipotesi
+### Hypothesis
 
-Applicare steering a layer diversi produce effetti diversi:
-- Layer bassi: cambio superficiale (stile)
-- Layer medi: cambio semantico (significato)
-- Layer alti: cambio nella selezione del token
+Applying steering to different layers produces different effects:
+- Low layers: superficial change (style)
+- Middle layers: semantic change (meaning)
+- High layers: change in token selection
 
 ### Test
 
-**Setup base:**
+**Base setup:**
 ```
 Write a poem about the ocean.
 ```
 
-**Configurazioni da testare:**
+**Configurations to test:**
 
-1. **Steering layer basso (layer 4)**
+1. **Low layer steering (layer 4)**
    - Coefficient: 1.0
-   - Effetto atteso: cambio stilistico
+   - Expected effect: stylistic change
 
-2. **Steering layer medio (layer 12)**
+2. **Middle layer steering (layer 12)**
    - Coefficient: 1.0
-   - Effetto atteso: cambio tematico
+   - Expected effect: thematic change
 
-3. **Steering layer alto (layer 20)**
+3. **High layer steering (layer 20)**
    - Coefficient: 1.0
-   - Effetto atteso: cambio nella scelta delle parole
+   - Expected effect: change in word choice
 
-4. **Multi-layer simultaneo (4, 12, 20)**
-   - Coefficient: 0.7 per tutti
-   - Effetto atteso: effetto combinato
+4. **Simultaneous multi-layer (4, 12, 20)**
+   - Coefficient: 0.7 for all
+   - Expected effect: combined effect
 
-### Analisi
+### Analysis
 
-Per ogni configurazione:
-1. Salva la timeline
-2. Nota le differenze nel testo generato
-3. Identifica quali dimensioni cambiano di più
-4. Confronta l'effetto sui diversi layer
+For each configuration:
+1. Save the timeline
+2. Note differences in generated text
+3. Identify which dimensions change the most
+4. Compare effect on different layers
 
-## Esperimento 5: Debugging del Comportamento
+## Experiment 5: Behavior Debugging
 
-### Caso: Output Inaspettato
+### Case: Unexpected Output
 
-**Scenario:** Il modello produce una risposta strana
+**Scenario:** The model produces a strange response
 
-**Prompt problematico:**
+**Problematic prompt:**
 ```
 The moon is made of
 ```
 
-**Risposta inaspettata:** (ad esempio, continua con informazioni errate)
+**Unexpected response:** (for example, continues with incorrect information)
 
-### Processo di debugging
+### Debugging process
 
-1. **Identifica il token critico**
-   - Naviga token per token
-   - Trova dove la generazione "devia"
+1. **Identify the critical token**
+   - Navigate token by token
+   - Find where generation "deviates"
 
-2. **Analizza gli hidden states**
-   - Quali layer mostrano attivazioni anomale?
-   - Ci sono pattern inaspettati?
+2. **Analyze hidden states**
+   - Which layers show anomalous activations?
+   - Are there unexpected patterns?
 
-3. **Ipotizza la causa**
-   - Confronto con prompt simili corretti
-   - Identificazione delle dimensioni problematiche
+3. **Hypothesize the cause**
+   - Comparison with similar correct prompts
+   - Identification of problematic dimensions
 
-4. **Tenta correzione con steering**
-   - Crea o usa un vettore che "spinge" verso il comportamento corretto
-   - Applica al layer identificato come problematico
+4. **Attempt correction with steering**
+   - Create or use a vector that "pushes" toward correct behavior
+   - Apply to layer identified as problematic
 
-## Patterns Comuni da Cercare
+## Common Patterns to Look For
 
 ### Pattern 1: "Information Retrieval"
-**Caratteristiche:**
-- Attivazioni forti nei layer bassi
-- Convergenza rapida nei layer alti
-- Bassa varianza tra token
+**Characteristics:**
+- Strong activations in low layers
+- Rapid convergence in high layers
+- Low variance between tokens
 
 ### Pattern 2: "Reasoning Chain"
-**Caratteristiche:**
-- Attivazioni che evolvono gradualmente
-- Transizioni visibili tra "step" di ragionamento
-- Dimensioni che si "accendono" in sequenza
+**Characteristics:**
+- Gradually evolving activations
+- Visible transitions between reasoning "steps"
+- Dimensions that "light up" in sequence
 
 ### Pattern 3: "Creative Exploration"
-**Caratteristiche:**
-- Alta varianza nelle attivazioni
-- Pattern meno strutturati
-- Maggiore "diversità" tra layer successivi
+**Characteristics:**
+- High variance in activations
+- Less structured patterns
+- Greater "diversity" between successive layers
 
 ### Pattern 4: "Token Selection"
-**Caratteristiche:**
-- Convergenza negli ultimi 2-3 layer
-- Pattern molto distintivo per token specifici
-- Correlazione con probabilità del token
+**Characteristics:**
+- Convergence in last 2-3 layers
+- Very distinctive pattern for specific tokens
+- Correlation with token probability
 
-## Esercizi Avanzati
+## Advanced Exercises
 
-### Esercizio 1: Crea un Atlas di Pattern
+### Exercise 1: Create a Pattern Atlas
 
-1. Genera 10 tipi diversi di prompt (matematica, storia, creatività, ecc.)
-2. Salva le visualizzazioni per ciascuno
-3. Identifica pattern ricorrenti
-4. Crea una "mappa" mentale dei pattern comuni
+1. Generate 10 different types of prompts (math, history, creativity, etc.)
+2. Save visualizations for each
+3. Identify recurring patterns
+4. Create a mental "map" of common patterns
 
-### Esercizio 2: Steering Vector Personale
+### Exercise 2: Personal Steering Vector
 
-1. Identifica un comportamento che vuoi controllare
-2. Crea 5-10 coppie di prompt contrastanti
-3. Genera il tuo steering vector
-4. Testa su nuovi prompt
-5. Itera fino a ottenere l'effetto desiderato
+1. Identify a behavior you want to control
+2. Create 5-10 pairs of contrasting prompts
+3. Generate your own steering vector
+4. Test on new prompts
+5. Iterate until achieving desired effect
 
-### Esercizio 3: Layer Importance Analysis
+### Exercise 3: Layer Importance Analysis
 
-Per un task specifico:
-1. Applica steering a ciascun layer individualmente
-2. Misura l'effetto sul testo generato
-3. Identifica quali layer sono più influenti
-4. Crea un "profilo di importanza" per il task
+For a specific task:
+1. Apply steering to each layer individually
+2. Measure effect on generated text
+3. Identify which layers are most influential
+4. Create an "importance profile" for the task
 
-## Risorse Aggiuntive
+## Additional Resources
 
-- Paper originale su CAA: [Anthropic](https://www.anthropic.com/index/steering-gpt-2-xl-by-adding-an-activation-vector)
+- Original CAA paper: [Anthropic](https://www.anthropic.com/index/steering-gpt-2-xl-by-adding-an-activation-vector)
 - Transformer Circuits: [Understanding transformers](https://transformer-circuits.pub/)
 - Community examples: [GitHub discussions](#)
 
-## Conclusioni
+## Conclusions
 
-Attraverso questi esperimenti hai imparato a:
-- ✅ Visualizzare e interpretare hidden states
-- ✅ Identificare pattern di ragionamento
-- ✅ Usare steering vectors per controllo
-- ✅ Debuggare comportamenti del modello
-- ✅ Analizzare differenze tra layer
+Through these experiments you've learned to:
+- ✅ Visualize and interpret hidden states
+- ✅ Identify reasoning patterns
+- ✅ Use steering vectors for control
+- ✅ Debug model behaviors
+- ✅ Analyze differences between layers
 
-**Prossimi passi:**
-- Sperimenta con modelli diversi
-- Crea la tua collezione di steering vectors
-- Condividi i tuoi findings con la community!
+**Next steps:**
+- Experiment with different models
+- Create your own collection of steering vectors
+- Share your findings with the community!
 
 ---
 
-**Buona esplorazione! 🔬🧠**
+**Happy exploring! 🔬🧠**
