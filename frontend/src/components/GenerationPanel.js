@@ -7,6 +7,9 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
   const [temperature, setTemperature] = useState(1.0);
   const [topK, setTopK] = useState(50);
   const [topP, setTopP] = useState(0.9);
+  const [doSample, setDoSample] = useState(true);
+  const [useSeed, setUseSeed] = useState(false);
+  const [seed, setSeed] = useState(42);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
   
@@ -47,19 +50,27 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
     setError(null);
 
     try {
+      const requestBody = {
+        prompt,
+        max_new_tokens: maxTokens,
+        temperature,
+        top_k: topK,
+        top_p: topP,
+        do_sample: doSample,
+        steering_configs: steeringConfigs.map(({ id, ...rest }) => rest)
+      };
+
+      // Add seed only if enabled
+      if (useSeed) {
+        requestBody.seed = seed;
+      }
+
       const response = await fetch(`${apiBaseUrl}/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          prompt,
-          max_new_tokens: maxTokens,
-          temperature,
-          top_k: topK,
-          top_p: topP,
-          steering_configs: steeringConfigs.map(({ id, ...rest }) => rest)
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -114,7 +125,7 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
             step="0.1"
             value={temperature}
             onChange={(e) => setTemperature(parseFloat(e.target.value))}
-            disabled={generating}
+            disabled={generating || !doSample}
           />
         </div>
 
@@ -126,7 +137,7 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
             max="100"
             value={topK}
             onChange={(e) => setTopK(parseInt(e.target.value))}
-            disabled={generating}
+            disabled={generating || !doSample}
           />
         </div>
 
@@ -139,8 +150,78 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
             step="0.05"
             value={topP}
             onChange={(e) => setTopP(parseFloat(e.target.value))}
-            disabled={generating}
+            disabled={generating || !doSample}
           />
+        </div>
+      </div>
+
+      {/* Reproducibility Controls */}
+      <div className="reproducibility-section">
+        <h3>🎲 Reproducibility Settings</h3>
+        
+        <div className="reproducibility-controls">
+          <div className="form-group-inline">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={!doSample}
+                onChange={(e) => setDoSample(!e.target.checked)}
+                disabled={generating}
+              />
+              <span>Deterministic (Greedy Decoding)</span>
+            </label>
+            <p className="help-text">
+              {doSample 
+                ? "⚠️ Sampling enabled: results will vary even with same seed" 
+                : "✓ Greedy decoding: always selects most likely token (fully deterministic)"}
+            </p>
+          </div>
+
+          <div className="form-group-inline">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={useSeed}
+                onChange={(e) => setUseSeed(e.target.checked)}
+                disabled={generating}
+              />
+              <span>Use Fixed Seed</span>
+            </label>
+            {useSeed && (
+              <div className="seed-input-group">
+                <label>Seed:</label>
+                <input
+                  type="number"
+                  value={seed}
+                  onChange={(e) => setSeed(parseInt(e.target.value) || 0)}
+                  disabled={generating}
+                  className="seed-input"
+                  min="0"
+                />
+                <button
+                  onClick={() => setSeed(Math.floor(Math.random() * 1000000))}
+                  disabled={generating}
+                  className="random-seed-button"
+                >
+                  🎲 Random
+                </button>
+              </div>
+            )}
+            <p className="help-text">
+              {useSeed 
+                ? `Using seed ${seed} for reproducibility` 
+                : "No seed: each generation will be different"}
+            </p>
+          </div>
+
+          <div className="reproducibility-info">
+            <strong>ℹ️ For exact reproducibility:</strong>
+            <ul>
+              <li>✓ Enable "Deterministic" mode (disables sampling)</li>
+              <li>✓ Use same prompt and parameters</li>
+              <li>✓ Optional: Fix seed for sampling mode (less deterministic)</li>
+            </ul>
+          </div>
         </div>
       </div>
 

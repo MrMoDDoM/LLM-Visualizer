@@ -75,13 +75,6 @@ function NavigationControls({
         ▶
       </button>
 
-      <div className="token-info-compact">
-        <span className="token-counter">
-          {currentTokenIndex + 1} / {totalTokens}
-        </span>
-        <span className="token-text">"{currentTokenText}"</span>
-      </div>
-
       {isPlaying && (
         <div className="speed-control-compact">
           <label>Speed:</label>

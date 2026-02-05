@@ -14,6 +14,11 @@ function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex })
   const [timelineImage, setTimelineImage] = useState(null);
   const [loading, setLoading] = useState(false);
   
+  // Collapse state for legend boxes
+  const [isEmbeddingLegendOpen, setIsEmbeddingLegendOpen] = useState(false);
+  const [isMainLegendOpen, setIsMainLegendOpen] = useState(false);
+  const [isTimelineLegendOpen, setIsTimelineLegendOpen] = useState(false);
+  
   // Zoom and pan state for main image
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -243,30 +248,52 @@ function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex })
     <div className="visualization-panel">
       <h2>📊 Hidden States Visualization</h2>
 
+      {/* Generated Text - moved to top */}
+      <div className="generated-text">
+        <h3>📝 Generated Text</h3>
+        <div className="text-content">
+          {generationResult.generated_text}
+        </div>
+      </div>
+
       {/* Normalization Controls Only */}
       <div className="controls-section">
         <div className="normalization-controls">
-          <label>
-            <input
-              type="radio"
-              value="auto"
-              checked={normalizationMode === 'auto'}
-              onChange={() => setNormalizationMode('auto')}
-            />
-            Auto Normalize
-          </label>
-          <label>
-            <input
-              type="radio"
-              value="fixed"
-              checked={normalizationMode === 'fixed'}
-              onChange={() => setNormalizationMode('fixed')}
-            />
-            Fixed Range
-          </label>
+          <div className="normalization-modes">
+            <label>
+              <input
+                type="radio"
+                value="auto"
+                checked={normalizationMode === 'auto'}
+                onChange={() => setNormalizationMode('auto')}
+              />
+              Auto Normalize
+            </label>
+            <label>
+              <input
+                type="radio"
+                value="fixed"
+                checked={normalizationMode === 'fixed'}
+                onChange={() => setNormalizationMode('fixed')}
+              />
+              Fixed Range
+            </label>
+          </div>
+
+          {actualVmin !== null && (
+            <div className="value-range-display">
+              <span className="range-label">Current Range:</span>
+              <span className="range-values">
+                <span className="range-min">{actualVmin.toFixed(4)}</span>
+                <span className="range-separator">→</span>
+                <span className="range-max">{actualVmax.toFixed(4)}</span>
+              </span>
+            </div>
+          )}
           
           {normalizationMode === 'fixed' && (
             <div className="range-inputs">
+              <label>Min:</label>
               <input
                 type="number"
                 value={vmin}
@@ -274,6 +301,7 @@ function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex })
                 step="0.1"
                 placeholder="Min"
               />
+              <label>Max:</label>
               <input
                 type="number"
                 value={vmax}
@@ -284,12 +312,6 @@ function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex })
             </div>
           )}
         </div>
-
-        {actualVmin !== null && (
-          <div className="value-range">
-            Range: [{actualVmin.toFixed(4)}, {actualVmax.toFixed(4)}]
-          </div>
-        )}
       </div>
 
       {/* Embedding Visualization */}
@@ -306,9 +328,20 @@ function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex })
             </div>
           </div>
           <div className="legend-box">
-            <p>📍 <strong>What:</strong> Initial token representation before processing</p>
-            <p>📐 <strong>Format:</strong> 1 row × {generationResult.hidden_size} dimensions</p>
-            <p>🎨 <strong>Colors:</strong> <span className="legend-blue">Blue (negative)</span> → White (zero) → <span className="legend-red">Red (positive)</span></p>
+            <div 
+              className="legend-header" 
+              onClick={() => setIsEmbeddingLegendOpen(!isEmbeddingLegendOpen)}
+            >
+              <span className={`legend-arrow ${isEmbeddingLegendOpen ? 'open' : ''}`}>▶</span>
+              <span>Legend</span>
+            </div>
+            {isEmbeddingLegendOpen && (
+              <div className="legend-content">
+                <p>📍 <strong>What:</strong> Initial token representation before processing</p>
+                <p>📐 <strong>Format:</strong> 1 row × {generationResult.hidden_size} dimensions</p>
+                <p>🎨 <strong>Colors:</strong> <span className="legend-blue">Blue (negative)</span> → White (zero) → <span className="legend-red">Red (positive)</span></p>
+              </div>
+            )}
           </div>
           <div 
             className="embedding-container"
@@ -348,10 +381,21 @@ function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex })
         </div>
 
         <div className="legend-box">
-          <p>📍 <strong>What:</strong> Hidden state activations for each layer processing this token</p>
-          <p>📐 <strong>Format:</strong> {generationResult.num_layers} layers (rows) × {generationResult.hidden_size} neurons (columns)</p>
-          <p>📖 <strong>Read:</strong> Top → Bottom = Layer 0 → Layer {generationResult.num_layers - 1}</p>
-          <p>🎨 <strong>Colors:</strong> <span className="legend-blue">Blue (negative)</span> → White (zero) → <span className="legend-red">Red (positive)</span></p>
+          <div 
+            className="legend-header" 
+            onClick={() => setIsMainLegendOpen(!isMainLegendOpen)}
+          >
+            <span className={`legend-arrow ${isMainLegendOpen ? 'open' : ''}`}>▶</span>
+            <span>Legend</span>
+          </div>
+          {isMainLegendOpen && (
+            <div className="legend-content">
+              <p>📍 <strong>What:</strong> Hidden state activations for each layer processing this token</p>
+              <p>📐 <strong>Format:</strong> {generationResult.num_layers} layers (rows) × {generationResult.hidden_size} neurons (columns)</p>
+              <p>📖 <strong>Read:</strong> Top → Bottom = Layer 0 → Layer {generationResult.num_layers - 1}</p>
+              <p>🎨 <strong>Colors:</strong> <span className="legend-blue">Blue (negative)</span> → White (zero) → <span className="legend-red">Red (positive)</span></p>
+            </div>
+          )}
         </div>
 
         <div 
@@ -395,10 +439,21 @@ function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex })
             <button onClick={downloadTimeline}>💾 Download</button>
           </div>
           <div className="legend-box">
-            <p>📍 <strong>What:</strong> All tokens stacked vertically showing full generation sequence</p>
-            <p>📐 <strong>Format:</strong> Each block of {generationResult.num_layers} rows = 1 token</p>
-            <p>📖 <strong>Read:</strong> Top → Bottom = First token → Last token generated</p>
-            <p>🎯 <strong>Interact:</strong> Click on any part to jump to that token</p>
+            <div 
+              className="legend-header" 
+              onClick={() => setIsTimelineLegendOpen(!isTimelineLegendOpen)}
+            >
+              <span className={`legend-arrow ${isTimelineLegendOpen ? 'open' : ''}`}>▶</span>
+              <span>Legend</span>
+            </div>
+            {isTimelineLegendOpen && (
+              <div className="legend-content">
+                <p>📍 <strong>What:</strong> All tokens stacked vertically showing full generation sequence</p>
+                <p>📐 <strong>Format:</strong> Each block of {generationResult.num_layers} rows = 1 token</p>
+                <p>📖 <strong>Read:</strong> Top → Bottom = First token → Last token generated</p>
+                <p>🎯 <strong>Interact:</strong> Click on any part to jump to that token</p>
+              </div>
+            )}
           </div>
           <p className="timeline-description">
             Click on the timeline to jump to a specific token
@@ -435,11 +490,11 @@ function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex })
                   key={idx}
                   className={`token-marker ${idx === currentTokenIndex ? 'active' : ''}`}
                   style={{
-                    left: `${(idx / generationResult.num_tokens_generated) * 100}%`
+                    top: `${(idx / generationResult.num_tokens_generated) * 100}%`
                   }}
                   title={`Token ${idx + 1}: "${token}"`}
                 >
-                  {idx === currentTokenIndex && '▼'}
+                  {idx === currentTokenIndex && '◀'}
                 </div>
               ))}
             </div>
@@ -459,13 +514,6 @@ function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex })
         </div>
       )}
 
-      {/* Generated Text */}
-      <div className="generated-text">
-        <h3>📝 Generated Text</h3>
-        <div className="text-content">
-          {generationResult.generated_text}
-        </div>
-      </div>
     </div>
   );
 }

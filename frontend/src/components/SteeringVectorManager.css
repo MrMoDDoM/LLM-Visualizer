@@ -79,6 +79,7 @@
 }
 
 .visualize-button,
+.download-button,
 .delete-button {
   padding: 8px 12px;
   min-width: auto;
@@ -91,6 +92,14 @@
 
 .visualize-button:hover:not(:disabled) {
   background: #2563eb;
+}
+
+.download-button {
+  background: #059669;
+}
+
+.download-button:hover:not(:disabled) {
+  background: #047857;
 }
 
 .delete-button {

@@ -105,6 +105,35 @@ function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged }
     }
   };
 
+  const handleDownloadVector = async (name) => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/download_steering_vector/${name}`);
+
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+
+      // Convert response to blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${name}.pt`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+    } catch (err) {
+      setError(err.message);
+      console.error('Error downloading vector:', err);
+    }
+  };
+
   return (
     <div className="steering-vector-manager">
       <h2>🎛️ Steering Vector Library</h2>
@@ -142,12 +171,21 @@ function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged }
                   <button
                     onClick={() => handleVisualizeVector(vector.name)}
                     className="visualize-button"
+                    title="Visualize vector"
                   >
                     👁️
                   </button>
                   <button
+                    onClick={() => handleDownloadVector(vector.name)}
+                    className="download-button"
+                    title="Download vector (.pt)"
+                  >
+                    💾
+                  </button>
+                  <button
                     onClick={() => handleDeleteVector(vector.name)}
                     className="delete-button"
+                    title="Delete vector"
                   >
                     🗑️
                   </button>

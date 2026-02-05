@@ -5,8 +5,12 @@ import GenerationPanel from './components/GenerationPanel';
 import VisualizationPanel from './components/VisualizationPanel';
 import SteeringVectorManager from './components/SteeringVectorManager';
 import NavigationControls from './components/NavigationControls';
+import ContrastiveSearch from './components/ContrastiveSearch';
 
-const API_BASE_URL = 'http://localhost:8000';
+// API base URL is stored in state so the user can change it from the UI.
+const DEFAULT_API_BASE = typeof window !== 'undefined' && window.localStorage
+  ? (localStorage.getItem('apiBaseUrl') || 'http://localhost:8000')
+  : 'http://localhost:8000';
 
 function App() {
   const [modelLoaded, setModelLoaded] = useState(false);
@@ -15,15 +19,40 @@ function App() {
   const [steeringVectors, setSteeringVectors] = useState([]);
   const [apiStatus, setApiStatus] = useState('checking');
   const [currentTokenIndex, setCurrentTokenIndex] = useState(0);
+  const [apiBaseUrl, setApiBaseUrl] = useState(DEFAULT_API_BASE);
+  const [isEditingApi, setIsEditingApi] = useState(false);
+  const [editingApiValue, setEditingApiValue] = useState(DEFAULT_API_BASE);
+  const [activeTab, setActiveTab] = useState('generation'); // 'generation' or 'contrastive'
 
   // Check API status on mount
   useEffect(() => {
     checkApiStatus();
   }, []);
 
+  // Periodic API health check - runs every 10 seconds
+  useEffect(() => {
+    const healthCheckInterval = setInterval(() => {
+      checkApiStatus();
+    }, 10000); // Check every 10 seconds
+
+    return () => clearInterval(healthCheckInterval);
+  }, [apiBaseUrl]); // Restart interval when API URL changes
+
   const checkApiStatus = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/status`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+      const response = await fetch(`${apiBaseUrl}/status`, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
       setApiStatus('connected');
       setModelLoaded(data.model_loaded);
@@ -36,16 +65,35 @@ function App() {
     } catch (error) {
       console.error('API connection error:', error);
       setApiStatus('disconnected');
+      // Clear model info if connection is lost
+      if (error.name === 'AbortError') {
+        console.error('API request timeout - endpoint unreachable');
+      }
     }
   };
 
   const loadSteeringVectors = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/steering_vectors`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(`${apiBaseUrl}/steering_vectors`, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
       setSteeringVectors(data.vectors);
     } catch (error) {
       console.error('Error loading steering vectors:', error);
+      if (error.name === 'AbortError' || error.message.includes('fetch')) {
+        setApiStatus('disconnected');
+      }
     }
   };
 
@@ -69,9 +117,15 @@ function App() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/reset`, {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(`${apiBaseUrl}/reset`, {
         method: 'POST',
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         // Reset local state
@@ -81,12 +135,50 @@ function App() {
         setSteeringVectors([]);
         
         alert('✅ System reset successfully!');
+      } else {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
     } catch (error) {
       console.error('Error resetting:', error);
-      alert('❌ Error during reset');
+      if (error.name === 'AbortError') {
+        alert('❌ Error during reset: API timeout - endpoint unreachable');
+        setApiStatus('disconnected');
+      } else {
+        alert('❌ Error during reset');
+      }
     }
   };
+
+  // Save editingApiValue into apiBaseUrl (persist in localStorage) and re-check status
+  const saveApiBaseUrl = async () => {
+    const url = editingApiValue.trim();
+    if (!url) {
+      alert('Please enter a valid API base URL');
+      return;
+    }
+
+    setApiBaseUrl(url);
+    try {
+      localStorage.setItem('apiBaseUrl', url);
+    } catch (e) {
+      // ignore localStorage errors
+    }
+    setIsEditingApi(false);
+    // Re-check API status for the new URL and reload vectors if model was loaded
+    try {
+      await checkApiStatus();
+      if (modelLoaded) {
+        await loadSteeringVectors();
+      }
+    } catch (e) {
+      // handled in checkApiStatus
+    }
+  };
+
+  // keep the input in sync when apiBaseUrl changes externally
+  useEffect(() => {
+    setEditingApiValue(apiBaseUrl);
+  }, [apiBaseUrl]);
 
   return (
     <div className="App">
@@ -97,8 +189,48 @@ function App() {
             <div className="status-indicator">
               <span className={`status-dot ${apiStatus}`}></span>
               <span>API: {apiStatus}</span>
-              {modelLoaded && <span className="model-name">| Model: {modelInfo?.model_name}</span>}
+              {!isEditingApi && (
+                <button 
+                  className="api-config-toggle" 
+                  onClick={() => setIsEditingApi(true)}
+                  title="Configure API endpoint"
+                >
+                  ⚙️
+                </button>
+              )}
+              {modelLoaded && (
+                <span className="model-name">
+                  <button className="reset-button" onClick={handleReset} title="Reset system">
+                    🔄
+                  </button>
+                  | Model: {modelInfo?.model_name}
+                </span>
+              )}
             </div>
+            {isEditingApi && (
+              <div className="api-config-expanded">
+                <label>API Endpoint:</label>
+                <input
+                  type="text"
+                  value={editingApiValue}
+                  onChange={(e) => setEditingApiValue(e.target.value)}
+                  className="api-input"
+                  placeholder="http://localhost:8000"
+                />
+                <button className="api-save-button" onClick={saveApiBaseUrl}>✓ Save</button>
+                <button className="api-cancel-button" onClick={() => { setIsEditingApi(false); setEditingApiValue(apiBaseUrl); }}>✗ Cancel</button>
+              </div>
+            )}
+          </div>
+          
+          <div className="header-center">
+            {generationResult && (
+              <div className="current-token-display">
+                <span className="token-label"><strong>Current Token:</strong></span>
+                <span className="token-counter">{currentTokenIndex + 1} / {generationResult.num_tokens_generated}</span>
+                <span className="token-text">"{generationResult.tokens[currentTokenIndex]}"</span>
+              </div>
+            )}
           </div>
           
           <div className="header-right">
@@ -110,12 +242,6 @@ function App() {
                 onTokenChange={setCurrentTokenIndex}
               />
             )}
-            
-            {modelLoaded && (
-              <button className="reset-button" onClick={handleReset}>
-                🔄 Reset
-              </button>
-            )}
           </div>
         </div>
       </header>
@@ -124,7 +250,7 @@ function App() {
         {!modelLoaded ? (
           <div className="centered-container">
             <ModelLoader 
-              apiBaseUrl={API_BASE_URL}
+              apiBaseUrl={apiBaseUrl}
               onModelLoaded={(info) => {
                 setModelLoaded(true);
                 setModelInfo(info);
@@ -132,39 +258,68 @@ function App() {
             />
           </div>
         ) : (
-          <div className="workspace">
-            <div className="left-panel">
-              <GenerationPanel
-                apiBaseUrl={API_BASE_URL}
-                modelInfo={modelInfo}
-                steeringVectors={steeringVectors}
-                onGenerationComplete={(result) => {
-                  setGenerationResult(result);
-                  setCurrentTokenIndex(0); // Reset to first token on new generation
-                }}
-              />
-              
-              <SteeringVectorManager
-                apiBaseUrl={API_BASE_URL}
-                steeringVectors={steeringVectors}
-                onVectorsChanged={loadSteeringVectors}
-              />
+          <>
+            {/* Tab Navigation */}
+            <div className="tab-navigation">
+              <button
+                className={`tab-button ${activeTab === 'generation' ? 'active' : ''}`}
+                onClick={() => setActiveTab('generation')}
+              >
+                🎯 Generation & Analysis
+              </button>
+              <button
+                className={`tab-button ${activeTab === 'contrastive' ? 'active' : ''}`}
+                onClick={() => setActiveTab('contrastive')}
+              >
+                🔍 Contrastive Search
+              </button>
             </div>
 
-            <div className="right-panel">
-              {generationResult ? (
-                <VisualizationPanel
-                  apiBaseUrl={API_BASE_URL}
-                  generationResult={generationResult}
-                  currentTokenIndex={currentTokenIndex}
-                />
-              ) : (
-                <div className="placeholder">
-                  <p>Generate text to see visualizations</p>
+            {/* Tab Content */}
+            {activeTab === 'generation' ? (
+              <div className="workspace">
+                <div className="left-panel">
+                  <GenerationPanel
+                    apiBaseUrl={apiBaseUrl}
+                    modelInfo={modelInfo}
+                    steeringVectors={steeringVectors}
+                    onGenerationComplete={(result) => {
+                      setGenerationResult(result);
+                      setCurrentTokenIndex(0); // Reset to first token on new generation
+                    }}
+                  />
+                  
+                  <SteeringVectorManager
+                    apiBaseUrl={apiBaseUrl}
+                    steeringVectors={steeringVectors}
+                    onVectorsChanged={loadSteeringVectors}
+                  />
                 </div>
-              )}
-            </div>
-          </div>
+
+                <div className="right-panel">
+                  {generationResult ? (
+                    <VisualizationPanel
+                      apiBaseUrl={apiBaseUrl}
+                      generationResult={generationResult}
+                      currentTokenIndex={currentTokenIndex}
+                    />
+                  ) : (
+                    <div className="placeholder">
+                      <p>Generate text to see visualizations</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="contrastive-tab-content">
+                <ContrastiveSearch
+                  apiBaseUrl={apiBaseUrl}
+                  modelInfo={modelInfo}
+                  onVectorGenerated={loadSteeringVectors}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

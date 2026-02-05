@@ -21,7 +21,8 @@ app = FastAPI(title="LLM Hidden States Visualizer")
 # CORS middleware for React frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    # allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,6 +52,8 @@ class GenerationRequest(BaseModel):
     temperature: float = 1.0
     top_k: int = 50
     top_p: float = 0.9
+    do_sample: bool = True  # Set to False for deterministic greedy decoding
+    seed: Optional[int] = None  # Random seed for reproducibility
     steering_configs: List[Dict[str, Any]] = []  # [{"vector_name": str, "layer": int, "coefficient": float, "enabled": bool}]
 
 class NormalizationConfig(BaseModel):
@@ -66,6 +69,15 @@ class SteeringVectorInfo(BaseModel):
     name: str
     shape: List[int]
     norm: float
+
+class ContrastivePair(BaseModel):
+    positive: str
+    negative: str
+
+class ContrastiveSearchRequest(BaseModel):
+    vector_name: str
+    pairs: List[ContrastivePair]
+    target_layer: Optional[int] = None  # If None, will use middle layer
 
 # Helper functions
 def normalize_hidden_state(hidden_state: torch.Tensor, mode: str = "auto", vmin: float = None, vmax: float = None):
@@ -214,6 +226,15 @@ async def generate_text(request: GenerationRequest):
         raise HTTPException(status_code=400, detail="No model loaded")
     
     try:
+        # Set random seed for reproducibility if provided
+        if request.seed is not None:
+            torch.manual_seed(request.seed)
+            torch.cuda.manual_seed_all(request.seed)
+            np.random.seed(request.seed)
+            # Set deterministic behavior for PyTorch
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+        
         # Clear cache
         model_state.hidden_states_cache = []
         model_state.tokens_cache = []
@@ -283,30 +304,34 @@ async def generate_text(request: GenerationRequest):
             # Get logits and sample next token
             logits = outputs.logits[:, -1, :]
             
-            # Apply temperature
-            if request.temperature != 1.0:
-                logits = logits / request.temperature
-            
-            # Apply top-k filtering
-            if request.top_k > 0:
-                indices_to_remove = logits < torch.topk(logits, request.top_k)[0][..., -1, None]
-                logits[indices_to_remove] = float('-inf')
-            
-            # Apply top-p (nucleus) filtering
-            if request.top_p < 1.0:
-                sorted_logits, sorted_indices = torch.sort(logits, descending=True)
-                cumulative_probs = torch.cumsum(torch.softmax(sorted_logits, dim=-1), dim=-1)
+            # Deterministic decoding (greedy) if do_sample is False
+            if not request.do_sample:
+                next_token = torch.argmax(logits, dim=-1, keepdim=True)
+            else:
+                # Apply temperature
+                if request.temperature != 1.0:
+                    logits = logits / request.temperature
                 
-                sorted_indices_to_remove = cumulative_probs > request.top_p
-                sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
-                sorted_indices_to_remove[..., 0] = 0
+                # Apply top-k filtering
+                if request.top_k > 0:
+                    indices_to_remove = logits < torch.topk(logits, request.top_k)[0][..., -1, None]
+                    logits[indices_to_remove] = float('-inf')
                 
-                indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
-                logits[indices_to_remove] = float('-inf')
-            
-            # Sample next token
-            probs = torch.softmax(logits, dim=-1)
-            next_token = torch.multinomial(probs, num_samples=1)
+                # Apply top-p (nucleus) filtering
+                if request.top_p < 1.0:
+                    sorted_logits, sorted_indices = torch.sort(logits, descending=True)
+                    cumulative_probs = torch.cumsum(torch.softmax(sorted_logits, dim=-1), dim=-1)
+                    
+                    sorted_indices_to_remove = cumulative_probs > request.top_p
+                    sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+                    sorted_indices_to_remove[..., 0] = 0
+                    
+                    indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
+                    logits[indices_to_remove] = float('-inf')
+                
+                # Sample next token
+                probs = torch.softmax(logits, dim=-1)
+                next_token = torch.multinomial(probs, num_samples=1)
             
             # Store token
             model_state.tokens_cache.append(next_token.item())
@@ -438,6 +463,133 @@ async def visualize_timeline(normalization: NormalizationConfig):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creating timeline: {str(e)}")
+
+@app.post("/generate_steering_vector")
+async def generate_steering_vector(request: ContrastiveSearchRequest):
+    """Generate a steering vector using Contrastive Activation technique"""
+    if model_state.model is None:
+        raise HTTPException(status_code=400, detail="No model loaded")
+    
+    try:
+        # Determine target layer (default to middle layer)
+        target_layer = request.target_layer
+        if target_layer is None:
+            num_layers = len(model_state.model.model.layers)
+            target_layer = num_layers // 2
+        
+        print(f"Generating steering vector '{request.vector_name}' using {len(request.pairs)} pairs at layer {target_layer}")
+        
+        positive_activations = []
+        negative_activations = []
+        
+        # Process each pair
+        for i, pair in enumerate(request.pairs):
+            print(f"Processing pair {i+1}/{len(request.pairs)}")
+            
+            # Tokenize positive example
+            pos_inputs = model_state.tokenizer(pair.positive, return_tensors="pt").to(model_state.model.device)
+            
+            # Forward pass to get hidden states
+            with torch.no_grad():
+                pos_outputs = model_state.model(
+                    **pos_inputs,
+                    output_hidden_states=True,
+                    return_dict=True
+                )
+            
+            # Extract hidden state at target layer for the last token
+            # hidden_states is a tuple of (num_layers+1) tensors, each of shape [batch, seq_len, hidden_size]
+            pos_hidden = pos_outputs.hidden_states[target_layer + 1][:, -1, :].squeeze(0)  # +1 because includes embedding layer
+            positive_activations.append(pos_hidden)
+            
+            # Tokenize negative example
+            neg_inputs = model_state.tokenizer(pair.negative, return_tensors="pt").to(model_state.model.device)
+            
+            # Forward pass to get hidden states
+            with torch.no_grad():
+                neg_outputs = model_state.model(
+                    **neg_inputs,
+                    output_hidden_states=True,
+                    return_dict=True
+                )
+            
+            # Extract hidden state at target layer for the last token
+            neg_hidden = neg_outputs.hidden_states[target_layer + 1][:, -1, :].squeeze(0)
+            negative_activations.append(neg_hidden)
+        
+        # Stack all activations
+        positive_stack = torch.stack(positive_activations)  # [num_pairs, hidden_size]
+        negative_stack = torch.stack(negative_activations)  # [num_pairs, hidden_size]
+        
+        # Compute mean activations
+        positive_mean = positive_stack.mean(dim=0)  # [hidden_size]
+        negative_mean = negative_stack.mean(dim=0)  # [hidden_size]
+        
+        # Compute steering vector as the difference
+        steering_vector = positive_mean - negative_mean  # [hidden_size]
+        
+        # Normalize the vector (optional but recommended)
+        steering_vector = steering_vector / torch.norm(steering_vector)
+        
+        # Store the vector
+        model_state.steering_vectors[request.vector_name] = {
+            "vector": steering_vector.cpu(),
+            "shape": list(steering_vector.shape),
+            "norm": float(torch.norm(steering_vector).item()),
+            "layer": target_layer,
+            "num_pairs": len(request.pairs)
+        }
+        
+        print(f"✓ Generated steering vector '{request.vector_name}': shape {steering_vector.shape}, norm {torch.norm(steering_vector).item():.4f}")
+        
+        return {
+            "success": True,
+            "name": request.vector_name,
+            "shape": list(steering_vector.shape),
+            "norm": float(torch.norm(steering_vector).item()),
+            "layer": target_layer,
+            "num_pairs": len(request.pairs)
+        }
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error generating steering vector: {str(e)}")
+
+@app.get("/download_steering_vector/{name}")
+async def download_steering_vector(name: str):
+    """Download a steering vector as .pt file"""
+    if name not in model_state.steering_vectors:
+        raise HTTPException(status_code=404, detail=f"Vector '{name}' not found")
+    
+    try:
+        from fastapi.responses import StreamingResponse
+        
+        vector_info = model_state.steering_vectors[name]
+        vector = vector_info["vector"]
+        
+        # Save tensor to bytes
+        buffer = BytesIO()
+        torch.save({
+            'vector': vector,
+            'shape': vector_info['shape'],
+            'norm': vector_info['norm'],
+            'layer': vector_info.get('layer'),
+            'num_pairs': vector_info.get('num_pairs')
+        }, buffer)
+        buffer.seek(0)
+        
+        # Return as downloadable file
+        return StreamingResponse(
+            buffer,
+            media_type="application/octet-stream",
+            headers={
+                "Content-Disposition": f"attachment; filename={name}.pt"
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error downloading vector: {str(e)}")
 
 @app.post("/upload_steering_vector")
 async def upload_steering_vector(file: UploadFile = File(...), name: str = ""):

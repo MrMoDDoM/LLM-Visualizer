@@ -15,8 +15,14 @@
 .normalization-controls {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 20px;
   flex-wrap: wrap;
+}
+
+.normalization-modes {
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
 
 .normalization-controls label {
@@ -32,18 +38,69 @@
   accent-color: #667eea;
 }
 
+.value-range-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: rgba(102, 126, 234, 0.15);
+  border-radius: 8px;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+.range-label {
+  color: #a78bfa;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.range-values {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.95rem;
+}
+
+.range-min {
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.range-max {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.range-separator {
+  color: #9ca3af;
+}
+
 .range-inputs {
   display: flex;
+  align-items: center;
   gap: 10px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.range-inputs label {
+  color: #a78bfa;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0;
 }
 
 .range-inputs input {
   width: 100px;
-  padding: 8px;
+  padding: 6px 10px;
   background: #151933;
   border: 1px solid #374151;
   border-radius: 6px;
   color: #e0e0e0;
+  font-family: 'Courier New', monospace;
 }
 
 .value-range {
@@ -59,6 +116,37 @@
   border-radius: 6px;
   margin-bottom: 15px;
   border-left: 4px solid #3b82f6;
+}
+
+.legend-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  color: #93c5fd;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.legend-header:hover {
+  color: #bfdbfe;
+}
+
+.legend-arrow {
+  display: inline-block;
+  transition: transform 0.2s ease;
+  font-size: 0.7rem;
+}
+
+.legend-arrow.open {
+  transform: rotate(90deg);
+}
+
+.legend-content {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(59, 130, 246, 0.3);
 }
 
 .legend-box p {
@@ -241,18 +329,19 @@
 
 .token-marker {
   position: absolute;
-  top: 0;
-  width: 2px;
-  height: 100%;
+  left: 0;
+  width: 100%;
+  height: 2px;
   color: #fbbf24;
   font-size: 1.2rem;
-  text-align: center;
+  display: flex;
+  align-items: center;
   line-height: 1;
 }
 
 .token-marker.active {
   background: rgba(251, 191, 36, 0.3);
-  width: 4px;
+  height: 4px;
 }
 
 .token-list {

@@ -41,12 +41,22 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1;
+}
+
+.header-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
 }
 
 .header-right {
   display: flex;
   align-items: center;
   gap: 16px;
+  flex: 1;
+  justify-content: flex-end;
 }
 
 .App-header h1 {
@@ -60,6 +70,88 @@ body {
   gap: 10px;
   font-size: 0.85rem;
   opacity: 0.9;
+}
+
+.api-config-toggle {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.api-config-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.api-config-expanded {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.api-config-expanded label {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+}
+
+.api-input {
+  flex: 1;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  color: white;
+  font-size: 0.85rem;
+  min-width: 250px;
+}
+
+.api-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.api-save-button,
+.api-cancel-button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.api-save-button {
+  background: #10b981;
+  color: white;
+}
+
+.api-save-button:hover {
+  background: #059669;
+}
+
+.api-cancel-button {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.api-cancel-button:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .status-dot {
@@ -92,13 +184,50 @@ body {
   background: rgba(255, 255, 255, 0.2);
   padding: 4px 12px;
   border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.current-token-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 8px 20px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+}
+
+.current-token-display .token-label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.85rem;
+}
+
+.current-token-display .token-counter {
+  font-weight: 600;
+  color: #fbbf24;
+  font-family: 'Courier New', monospace;
+}
+
+.current-token-display .token-text {
+  font-weight: 600;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 12px;
+  border-radius: 6px;
 }
 
 .reset-button {
-  padding: 6px 16px;
-  font-size: 0.9rem;
+  padding: 4px 12px;
+  font-size: 0.85rem;
   background: #dc2626;
-  margin-left: 12px;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .reset-button:hover:not(:disabled) {
@@ -112,6 +241,53 @@ body {
   width: 100%;
   margin: 0 auto;
   padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.tab-navigation {
+  display: flex;
+  gap: 10px;
+  background: #151933;
+  padding: 10px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.tab-button {
+  flex: 1;
+  padding: 12px 24px;
+  background: transparent;
+  border: 2px solid #374151;
+  border-radius: 8px;
+  color: #9ca3af;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.tab-button:hover {
+  border-color: #667eea;
+  color: #c4b5fd;
+  transform: translateY(-2px);
+}
+
+.tab-button.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.contrastive-tab-content {
+  background: #151933;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  overflow-y: auto;
+  max-height: calc(100vh - 220px);
 }
 
 .centered-container {
