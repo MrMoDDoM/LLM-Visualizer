@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './GenerationPanel.css';
 
-function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationComplete, onError }) {
+function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationComplete, onError, steeringConfigs, onSteeringConfigsChange }) {
   const [prompt, setPrompt] = useState('Tell me a short story about a robot.');
   const [maxTokens, setMaxTokens] = useState(20);
   const [temperature, setTemperature] = useState(1.0);
@@ -12,9 +12,6 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
   const [seed, setSeed] = useState(42);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
-  
-  // Steering configurations
-  const [steeringConfigs, setSteeringConfigs] = useState([]);
 
   // Handle spacebar shortcut for generation
   useEffect(() => {
@@ -42,24 +39,22 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
     }
     
     const defaultLayer = 16; // Default layer is now fixed at 16
-    setSteeringConfigs([
-      ...steeringConfigs,
-      {
-        id: Date.now(),
-        vector_name: steeringVectors[0].name,
-        layer: defaultLayer,
-        coefficient: 1.0,
-        enabled: true
-      }
-    ]);
+    const newConfig = {
+      id: Date.now(),
+      vector_name: steeringVectors[0].name,
+      layer: defaultLayer,
+      coefficient: 0.0, // Default coefficient is 0
+      enabled: true
+    };
+    onSteeringConfigsChange([...steeringConfigs, newConfig]);
   };
 
   const removeSteeringConfig = (id) => {
-    setSteeringConfigs(steeringConfigs.filter(config => config.id !== id));
+    onSteeringConfigsChange(steeringConfigs.filter(config => config.id !== id));
   };
 
   const updateSteeringConfig = (id, field, value) => {
-    setSteeringConfigs(steeringConfigs.map(config =>
+    onSteeringConfigsChange(steeringConfigs.map(config =>
       config.id === id ? { ...config, [field]: value } : config
     ));
   };
@@ -327,19 +322,6 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
                   <span className="layer-range-info">
                     (0-{modelInfo.num_layers - 1})
                   </span>
-                </div>
-
-                <div className="config-row">
-                  <label>Coefficient: {config.coefficient.toFixed(2)}</label>
-                  <input
-                    type="range"
-                    min="-5"
-                    max="5"
-                    step="0.1"
-                    value={config.coefficient}
-                    onChange={(e) => updateSteeringConfig(config.id, 'coefficient', parseFloat(e.target.value))}
-                    disabled={generating}
-                  />
                 </div>
               </div>
             ))}

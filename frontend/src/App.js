@@ -18,6 +18,7 @@ function App() {
   const [modelInfo, setModelInfo] = useState(null);
   const [generationResult, setGenerationResult] = useState(null);
   const [steeringVectors, setSteeringVectors] = useState([]);
+  const [steeringConfigs, setSteeringConfigs] = useState([]);
   const [apiStatus, setApiStatus] = useState('checking');
   const [currentTokenIndex, setCurrentTokenIndex] = useState(0);
   const [apiBaseUrl, setApiBaseUrl] = useState(DEFAULT_API_BASE);
@@ -97,6 +98,15 @@ function App() {
         setApiStatus('disconnected');
       }
     }
+  };
+
+  // Handler for radar chart coefficient changes
+  const handleCoefficientChange = (id, newCoefficient) => {
+    setSteeringConfigs(configs => 
+      configs.map(config => 
+        config.id === id ? { ...config, coefficient: newCoefficient } : config
+      )
+    );
   };
 
   // Helper function to show error modal with optional stacktrace
@@ -307,6 +317,8 @@ function App() {
                     apiBaseUrl={apiBaseUrl}
                     modelInfo={modelInfo}
                     steeringVectors={steeringVectors}
+                    steeringConfigs={steeringConfigs}
+                    onSteeringConfigsChange={setSteeringConfigs}
                     onGenerationComplete={(result) => {
                       setGenerationResult(result);
                       setCurrentTokenIndex(0); // Reset to first token on new generation
@@ -328,6 +340,8 @@ function App() {
                       apiBaseUrl={apiBaseUrl}
                       generationResult={generationResult}
                       currentTokenIndex={currentTokenIndex}
+                      steeringConfigs={steeringConfigs}
+                      onCoefficientChange={handleCoefficientChange}
                     />
                   ) : (
                     <div className="placeholder">

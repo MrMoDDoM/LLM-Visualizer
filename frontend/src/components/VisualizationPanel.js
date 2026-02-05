@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './VisualizationPanel.css';
+import SteeringRadarChart from './SteeringRadarChart';
 
-function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex }) {
+function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex, steeringConfigs, onCoefficientChange }) {
   // Remove internal token index management - now controlled by parent
   const [normalizationMode, setNormalizationMode] = useState('auto');
   const [vmin, setVmin] = useState(-1.0);
@@ -542,10 +543,10 @@ function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex })
           </div>
         ) : (
           <div className="viz-tab-content">
-            <div className="placeholder-content">
-              <h3>📊 Analysis Tab</h3>
-              <p>This section is under development. Advanced analysis features will be added here.</p>
-            </div>
+            <SteeringRadarChart 
+              steeringConfigs={steeringConfigs || []}
+              onCoefficientChange={onCoefficientChange}
+            />
           </div>
         )}
       </div>
