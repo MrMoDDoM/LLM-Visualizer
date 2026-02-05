@@ -12,6 +12,7 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
   const [vectorName, setVectorName] = useState('');
+  const [targetLayer, setTargetLayer] = useState(null); // null = use default (middle layer)
 
   const addPair = () => {
     setContrastivePairs([
@@ -83,7 +84,7 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
             positive: pair.positive,
             negative: pair.negative
           })),
-          target_layer: null // Use default (middle layer)
+          target_layer: targetLayer // Use specified layer or null for default (middle layer)
         }),
       });
 
@@ -110,13 +111,8 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
         onVectorGenerated();
       }
       
-      // Reset form
+      // Reset only the vector name, keep the dataset
       setVectorName('');
-      setContrastivePairs([{
-        id: Date.now(),
-        positive: '',
-        negative: ''
-      }]);
       
     } catch (err) {
       if (onError) {
@@ -204,6 +200,31 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
           disabled={generating}
           className="vector-name-input"
         />
+      </div>
+
+      <div className="layer-selection">
+        <label>Target Layer:</label>
+        <div className="layer-input-group">
+          <input
+            type="number"
+            value={targetLayer === null ? '' : targetLayer}
+            onChange={(e) => {
+              const val = e.target.value;
+              setTargetLayer(val === '' ? null : parseInt(val));
+            }}
+            placeholder={`Auto (${modelInfo ? Math.floor(modelInfo.num_layers / 2) : 'N/A'})`}
+            disabled={generating}
+            min={0}
+            max={modelInfo ? modelInfo.num_layers - 1 : 0}
+            className="layer-input"
+          />
+          <span className="layer-info">
+            {targetLayer === null 
+              ? `Using middle layer (${modelInfo ? Math.floor(modelInfo.num_layers / 2) : 'N/A'})` 
+              : `Layer ${targetLayer} of ${modelInfo ? modelInfo.num_layers - 1 : 'N/A'}`
+            }
+          </span>
+        </div>
       </div>
 
       <div className="dataset-container">

@@ -590,6 +590,11 @@ async def download_steering_vector(name: str):
         
         vector_info = model_state.steering_vectors[name]
         vector = vector_info["vector"]
+        layer = vector_info.get('layer', 'unknown')
+        
+        # Build filename: {name}_{base_model_name}_{layer}.pt
+        base_model_name = model_state.model_name.split('/')[-1] if model_state.model_name else 'unknown'
+        filename = f"{name}_{base_model_name}_{layer}.pt"
         
         # Save tensor to bytes
         buffer = BytesIO()
@@ -607,7 +612,7 @@ async def download_steering_vector(name: str):
             buffer,
             media_type="application/octet-stream",
             headers={
-                "Content-Disposition": f"attachment; filename={name}.pt"
+                "Content-Disposition": f"attachment; filename={filename}"
             }
         )
         

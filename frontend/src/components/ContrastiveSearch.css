@@ -92,6 +92,51 @@
   border-color: #667eea;
 }
 
+.layer-selection {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: #0a0e27;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #374151;
+}
+
+.layer-selection label {
+  color: #c4b5fd;
+  font-weight: 600;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.layer-input-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.layer-input {
+  padding: 10px 15px;
+  background: #151933;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 1rem;
+  width: 120px;
+}
+
+.layer-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.layer-info {
+  color: #9ca3af;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
 .dataset-container {
   background: #0a0e27;
   padding: 20px;
