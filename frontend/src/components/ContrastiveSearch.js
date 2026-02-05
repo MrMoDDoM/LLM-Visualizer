@@ -13,6 +13,7 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
   const [error, setError] = useState(null);
   const [vectorName, setVectorName] = useState('');
   const [targetLayer, setTargetLayer] = useState(null); // null = use default (middle layer)
+  const [datasetDescription, setDatasetDescription] = useState('');
 
   const addPair = () => {
     setContrastivePairs([
@@ -127,12 +128,24 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
   };
 
   const exportDataset = () => {
-    const dataStr = JSON.stringify(contrastivePairs, null, 2);
+    const dataset = {
+      metadata: {
+        name: vectorName || 'Untitled Dataset',
+        target_layer: targetLayer,
+        description: datasetDescription || '',
+        created_at: new Date().toISOString(),
+        version: '1.0'
+      },
+      pairs: contrastivePairs
+    };
+    
+    const dataStr = JSON.stringify(dataset, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `contrastive_dataset_${Date.now()}.json`;
+    const filename = vectorName ? `${vectorName}_dataset.json` : `contrastive_dataset_${Date.now()}.json`;
+    link.download = filename;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -145,19 +158,38 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
     reader.onload = (e) => {
       try {
         const imported = JSON.parse(e.target.result);
-        if (Array.isArray(imported)) {
+        
+        // Check if new format (with metadata) or old format (array only)
+        if (imported.metadata && Array.isArray(imported.pairs)) {
+          // New format with metadata
+          const { metadata, pairs } = imported;
+          
+          // Populate UI fields from metadata
+          if (metadata.name) setVectorName(metadata.name);
+          if (metadata.target_layer !== undefined) setTargetLayer(metadata.target_layer);
+          if (metadata.description) setDatasetDescription(metadata.description);
+          
           // Ensure each pair has an ID
+          const withIds = pairs.map(pair => ({
+            ...pair,
+            id: pair.id || Date.now() + Math.random()
+          }));
+          setContrastivePairs(withIds);
+          
+          alert(`✅ Imported dataset "${metadata.name}" with ${withIds.length} pairs`);
+        } else if (Array.isArray(imported)) {
+          // Old format (backward compatibility)
           const withIds = imported.map(pair => ({
             ...pair,
             id: pair.id || Date.now() + Math.random()
           }));
           setContrastivePairs(withIds);
-          alert(`✅ Imported ${withIds.length} pairs`);
+          alert(`✅ Imported ${withIds.length} pairs (legacy format)`);
         } else {
-          alert('Invalid file format');
+          alert('❌ Invalid file format');
         }
       } catch (err) {
-        alert('Error parsing JSON file');
+        alert('❌ Error parsing JSON file: ' + err.message);
       }
     };
     reader.readAsText(file);
@@ -229,6 +261,18 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
               : `Layer ${targetLayer} of ${modelInfo ? modelInfo.num_layers - 1 : 'N/A'}`
             }
           </span>
+        </div>
+
+        <div className="dataset-description">
+          <label>Dataset Description (optional):</label>
+          <textarea
+            value={datasetDescription}
+            onChange={(e) => setDatasetDescription(e.target.value)}
+            placeholder="Describe the purpose and characteristics of this dataset..."
+            disabled={generating}
+            className="description-textarea"
+            rows={3}
+          />
         </div>
       </div>
 

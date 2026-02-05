@@ -157,6 +157,42 @@
   margin-left: auto;
 }
 
+.dataset-description {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dataset-description label {
+  color: #c4b5fd;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.description-textarea {
+  width: 100%;
+  padding: 10px 15px;
+  background: #151933;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.description-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.description-textarea::placeholder {
+  color: #6b7280;
+  font-style: italic;
+}
+
 .dataset-container {
   background: #0a0e27;
   padding: 20px;
