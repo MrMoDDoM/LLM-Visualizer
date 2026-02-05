@@ -6,6 +6,7 @@ import VisualizationPanel from './components/VisualizationPanel';
 import SteeringVectorManager from './components/SteeringVectorManager';
 import NavigationControls from './components/NavigationControls';
 import ContrastiveSearch from './components/ContrastiveSearch';
+import ErrorModal from './components/ErrorModal';
 
 // API base URL is stored in state so the user can change it from the UI.
 const DEFAULT_API_BASE = typeof window !== 'undefined' && window.localStorage
@@ -23,6 +24,7 @@ function App() {
   const [isEditingApi, setIsEditingApi] = useState(false);
   const [editingApiValue, setEditingApiValue] = useState(DEFAULT_API_BASE);
   const [activeTab, setActiveTab] = useState('generation'); // 'generation' or 'contrastive'
+  const [currentError, setCurrentError] = useState(null); // { message: string, stacktrace: string }
 
   // Check API status on mount
   useEffect(() => {
@@ -95,6 +97,28 @@ function App() {
         setApiStatus('disconnected');
       }
     }
+  };
+
+  // Helper function to show error modal with optional stacktrace
+  const showError = async (error) => {
+    let message = error.message || String(error);
+    let stacktrace = null;
+
+    // If error has response property (from fetch), try to extract stacktrace
+    if (error.response) {
+      try {
+        const data = await error.response.json();
+        message = data.detail || message;
+        stacktrace = data.stacktrace || null;
+      } catch (e) {
+        // ignore JSON parse errors
+      }
+    } else if (error.detail) {
+      message = error.detail;
+      stacktrace = error.stacktrace || null;
+    }
+
+    setCurrentError({ message, stacktrace });
   };
 
   useEffect(() => {
@@ -287,12 +311,14 @@ function App() {
                       setGenerationResult(result);
                       setCurrentTokenIndex(0); // Reset to first token on new generation
                     }}
+                    onError={showError}
                   />
                   
                   <SteeringVectorManager
                     apiBaseUrl={apiBaseUrl}
                     steeringVectors={steeringVectors}
                     onVectorsChanged={loadSteeringVectors}
+                    onError={showError}
                   />
                 </div>
 
@@ -316,12 +342,19 @@ function App() {
                   apiBaseUrl={apiBaseUrl}
                   modelInfo={modelInfo}
                   onVectorGenerated={loadSteeringVectors}
+                  onError={showError}
                 />
               </div>
             )}
           </>
         )}
       </div>
+
+      {/* Error Modal */}
+      <ErrorModal 
+        error={currentError} 
+        onClose={() => setCurrentError(null)} 
+      />
     </div>
   );
 }

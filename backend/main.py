@@ -5,6 +5,7 @@ FastAPI server for LLM inference with hidden state extraction and steering vecto
 
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import torch
@@ -15,6 +16,7 @@ from io import BytesIO
 from PIL import Image
 import json
 import os
+import traceback
 
 app = FastAPI(title="LLM Hidden States Visualizer")
 
@@ -27,6 +29,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Global exception handler to include stacktrace
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    tb = traceback.format_exc()
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": str(exc),
+            "stacktrace": tb
+        }
+    )
 
 # Global state
 class ModelState:
@@ -250,12 +264,21 @@ async def generate_text(request: GenerationRequest):
         
         def create_steering_hook(vector: torch.Tensor, coefficient: float):
             def hook(module, input, output):
-                # output is a tuple, first element is the hidden states
-                hidden_states = output[0]
-                steering_vector = vector.to(hidden_states.device).to(hidden_states.dtype)
-                # Add steering vector to all positions
-                hidden_states = hidden_states + coefficient * steering_vector.unsqueeze(0).unsqueeze(0)
-                return (hidden_states,) + output[1:]
+                # Handle different output types
+                if isinstance(output, tuple):
+                    # output is a tuple, first element is the hidden states
+                    hidden_states = output[0]
+                    steering_vector = vector.to(hidden_states.device).to(hidden_states.dtype)
+                    # Add steering vector to all positions
+                    steered_hidden_states = hidden_states + coefficient * steering_vector.unsqueeze(0).unsqueeze(0)
+                    return (steered_hidden_states,) + output[1:]
+                else:
+                    # output is just the hidden states tensor
+                    hidden_states = output
+                    steering_vector = vector.to(hidden_states.device).to(hidden_states.dtype)
+                    # Add steering vector to all positions
+                    steered_hidden_states = hidden_states + coefficient * steering_vector.unsqueeze(0).unsqueeze(0)
+                    return steered_hidden_states
             return hook
         
         # Register hooks for steering

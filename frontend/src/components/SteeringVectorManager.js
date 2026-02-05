@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './SteeringVectorManager.css';
 
-function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged }) {
+function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged, onError }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedVector, setSelectedVector] = useState(null);
@@ -34,7 +34,12 @@ function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged }
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Upload failed');
+        if (onError) {
+          onError(errorData);
+        } else {
+          throw new Error(errorData.detail || 'Upload failed');
+        }
+        return;
       }
 
       await response.json();
@@ -44,7 +49,11 @@ function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged }
       e.target.value = '';
 
     } catch (err) {
-      setError(err.message);
+      if (onError) {
+        onError({ message: err.message, stacktrace: null });
+      } else {
+        setError(err.message);
+      }
     } finally {
       setUploading(false);
     }

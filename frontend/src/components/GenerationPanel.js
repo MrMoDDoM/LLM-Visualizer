@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './GenerationPanel.css';
 
-function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationComplete }) {
+function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationComplete, onError }) {
   const [prompt, setPrompt] = useState('Tell me a short story about a robot.');
   const [maxTokens, setMaxTokens] = useState(20);
   const [temperature, setTemperature] = useState(1.0);
@@ -75,14 +75,23 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Generation failed');
+        if (onError) {
+          onError(errorData);
+        } else {
+          throw new Error(errorData.detail || 'Generation failed');
+        }
+        return;
       }
 
       const data = await response.json();
       onGenerationComplete(data);
 
     } catch (err) {
-      setError(err.message);
+      if (onError) {
+        onError({ message: err.message, stacktrace: null });
+      } else {
+        setError(err.message);
+      }
     } finally {
       setGenerating(false);
     }

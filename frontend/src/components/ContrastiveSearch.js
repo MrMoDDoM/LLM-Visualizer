@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './ContrastiveSearch.css';
 
-function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated }) {
+function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }) {
   const [contrastivePairs, setContrastivePairs] = useState([
     {
       id: Date.now(),
@@ -89,7 +89,12 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated }) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to generate steering vector');
+        if (onError) {
+          onError(errorData);
+        } else {
+          throw new Error(errorData.detail || 'Failed to generate steering vector');
+        }
+        return;
       }
 
       const data = await response.json();
@@ -114,7 +119,11 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated }) {
       }]);
       
     } catch (err) {
-      setError(err.message);
+      if (onError) {
+        onError({ message: err.message, stacktrace: null });
+      } else {
+        setError(err.message);
+      }
       console.error('Error generating steering vector:', err);
     } finally {
       setGenerating(false);
