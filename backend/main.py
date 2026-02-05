@@ -757,6 +757,224 @@ async def visualize_steering_vector(name: str, normalization: NormalizationConfi
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error visualizing vector: {str(e)}")
 
+@app.get("/presets")
+async def list_presets():
+    """
+    Scan the Preset/ directory and return available presets with their datasets
+    Returns: {
+        "presets": [
+            {
+                "name": "preset_name",
+                "datasets": [
+                    {"filename": "dataset1.json", "metadata": {...}},
+                    ...
+                ]
+            }
+        ]
+    }
+    """
+    try:
+        preset_dir = os.path.join(os.path.dirname(__file__), "Preset")
+        
+        if not os.path.exists(preset_dir):
+            # Create empty Preset directory if it doesn't exist
+            os.makedirs(preset_dir)
+            return {"presets": []}
+        
+        presets = []
+        
+        # Iterate through preset directories
+        for preset_name in os.listdir(preset_dir):
+            preset_path = os.path.join(preset_dir, preset_name)
+            
+            # Skip if not a directory
+            if not os.path.isdir(preset_path):
+                continue
+            
+            datasets = []
+            
+            # Find all JSON files in this preset directory
+            for filename in os.listdir(preset_path):
+                if not filename.endswith('.json'):
+                    continue
+                
+                file_path = os.path.join(preset_path, filename)
+                
+                # Try to read metadata from the dataset
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                    
+                    # Check if new format with metadata or old format
+                    if isinstance(data, dict) and 'metadata' in data:
+                        metadata = data['metadata']
+                        pair_count = len(data.get('pairs', []))
+                    else:
+                        # Old format or no metadata
+                        metadata = {"name": filename.replace('.json', '')}
+                        pair_count = len(data) if isinstance(data, list) else 0
+                    
+                    datasets.append({
+                        "filename": filename,
+                        "metadata": metadata,
+                        "pair_count": pair_count
+                    })
+                except Exception as e:
+                    # If we can't read the file, skip it
+                    print(f"Warning: Could not read {file_path}: {str(e)}")
+                    continue
+            
+            if datasets:
+                presets.append({
+                    "name": preset_name,
+                    "dataset_count": len(datasets),
+                    "datasets": datasets
+                })
+        
+        return {"presets": presets}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error listing presets: {str(e)}")
+
+class ExecutePresetRequest(BaseModel):
+    preset_name: str
+
+@app.post("/execute_preset")
+async def execute_preset(request: ExecutePresetRequest):
+    """
+    Execute contrastive search for all datasets in a preset
+    Generates steering vectors and adds them to the available vectors
+    """
+    try:
+        if model_state.model is None:
+            raise HTTPException(status_code=400, detail="No model loaded")
+        
+        preset_dir = os.path.join(os.path.dirname(__file__), "Preset", request.preset_name)
+        
+        if not os.path.exists(preset_dir):
+            raise HTTPException(status_code=404, detail=f"Preset '{request.preset_name}' not found")
+        
+        generated_vectors = []
+        errors = []
+        
+        # Find all JSON files in the preset
+        json_files = [f for f in os.listdir(preset_dir) if f.endswith('.json')]
+        
+        if not json_files:
+            raise HTTPException(status_code=400, detail=f"No dataset files found in preset '{request.preset_name}'")
+        
+        # Process each dataset
+        for idx, filename in enumerate(json_files):
+            file_path = os.path.join(preset_dir, filename)
+            
+            try:
+                # Load dataset
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                
+                # Extract metadata and pairs
+                if isinstance(data, dict) and 'metadata' in data:
+                    metadata = data['metadata']
+                    pairs = data['pairs']
+                    vector_name = metadata.get('name', filename.replace('.json', ''))
+                    target_layer = metadata.get('target_layer', None)
+                else:
+                    # Old format
+                    pairs = data if isinstance(data, list) else []
+                    vector_name = filename.replace('.json', '')
+                    target_layer = None
+                
+                if not pairs:
+                    errors.append(f"{filename}: No pairs found")
+                    continue
+                
+                # Determine target layer
+                if target_layer is None:
+                    target_layer = model_state.model.config.num_hidden_layers // 2
+                
+                # Collect activations for all pairs
+                positive_activations = []
+                negative_activations = []
+                
+                for pair in pairs:
+                    positive_text = pair.get('positive', '')
+                    negative_text = pair.get('negative', '')
+                    
+                    if not positive_text or not negative_text:
+                        continue
+                    
+                    # Tokenize and get hidden states for positive
+                    pos_inputs = model_state.tokenizer(
+                        positive_text,
+                        return_tensors="pt",
+                        padding=True,
+                        truncation=True
+                    ).to(model_state.device)
+                    
+                    with torch.no_grad():
+                        pos_outputs = model_state.model(**pos_inputs, output_hidden_states=True)
+                        pos_hidden = pos_outputs.hidden_states[target_layer]
+                        pos_last_token = pos_hidden[:, -1, :]
+                        positive_activations.append(pos_last_token)
+                    
+                    # Tokenize and get hidden states for negative
+                    neg_inputs = model_state.tokenizer(
+                        negative_text,
+                        return_tensors="pt",
+                        padding=True,
+                        truncation=True
+                    ).to(model_state.device)
+                    
+                    with torch.no_grad():
+                        neg_outputs = model_state.model(**neg_inputs, output_hidden_states=True)
+                        neg_hidden = neg_outputs.hidden_states[target_layer]
+                        neg_last_token = neg_hidden[:, -1, :]
+                        negative_activations.append(neg_last_token)
+                
+                if not positive_activations or not negative_activations:
+                    errors.append(f"{filename}: No valid activations extracted")
+                    continue
+                
+                # Compute mean difference
+                pos_mean = torch.stack(positive_activations).mean(dim=0)
+                neg_mean = torch.stack(negative_activations).mean(dim=0)
+                steering_vector = (pos_mean - neg_mean).squeeze(0)
+                
+                # Store the steering vector
+                model_state.steering_vectors[vector_name] = {
+                    "vector": steering_vector,
+                    "layer": target_layer
+                }
+                
+                generated_vectors.append({
+                    "name": vector_name,
+                    "layer": target_layer,
+                    "shape": list(steering_vector.shape),
+                    "norm": float(torch.norm(steering_vector).item()),
+                    "source_file": filename,
+                    "pair_count": len(pairs)
+                })
+                
+            except Exception as e:
+                error_msg = f"{filename}: {str(e)}"
+                errors.append(error_msg)
+                print(f"Error processing {filename}: {str(e)}")
+                continue
+        
+        return {
+            "success": True,
+            "preset_name": request.preset_name,
+            "processed": len(generated_vectors),
+            "failed": len(errors),
+            "vectors": generated_vectors,
+            "errors": errors
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error executing preset: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

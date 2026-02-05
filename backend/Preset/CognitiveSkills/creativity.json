@@ -1,0 +1,31 @@
+{
+  "metadata": {
+    "name": "creativity",
+    "target_layer": 20,
+    "description": "Enhances creative and imaginative thinking patterns",
+    "created_at": "2026-02-05T10:00:00.000Z",
+    "version": "1.0"
+  },
+  "pairs": [
+    {
+      "id": 1,
+      "positive": "Let's explore unconventional and innovative solutions",
+      "negative": "Let's stick to the traditional boring approach"
+    },
+    {
+      "id": 2,
+      "positive": "I imagine a world where anything is possible",
+      "negative": "Reality is limited and nothing new can be done"
+    },
+    {
+      "id": 3,
+      "positive": "This inspires me to think outside the box",
+      "negative": "There's only one right way to do this"
+    },
+    {
+      "id": 4,
+      "positive": "Let's combine ideas in unique and unexpected ways",
+      "negative": "We should avoid risks and stay conventional"
+    }
+  ]
+}

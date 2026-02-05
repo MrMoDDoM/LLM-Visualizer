@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './ContrastiveSearch.css';
 
 function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }) {
@@ -14,6 +14,13 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
   const [vectorName, setVectorName] = useState('');
   const [targetLayer, setTargetLayer] = useState(null); // null = use default (middle layer)
   const [datasetDescription, setDatasetDescription] = useState('');
+  
+  // Preset management
+  const [presets, setPresets] = useState([]);
+  const [selectedPreset, setSelectedPreset] = useState('');
+  const [loadingPresets, setLoadingPresets] = useState(false);
+  const [executingPreset, setExecutingPreset] = useState(false);
+  const [presetProgress, setPresetProgress] = useState(null);
 
   const addPair = () => {
     setContrastivePairs([
@@ -127,6 +134,85 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
     }
   };
 
+  // Load available presets on mount
+  useEffect(() => {
+    loadPresets();
+  }, []);
+
+  const loadPresets = async () => {
+    setLoadingPresets(true);
+    try {
+      const response = await fetch(`${apiBaseUrl}/presets`);
+      if (response.ok) {
+        const data = await response.json();
+        setPresets(data.presets || []);
+      }
+    } catch (err) {
+      console.error('Error loading presets:', err);
+    } finally {
+      setLoadingPresets(false);
+    }
+  };
+
+  const executePreset = async () => {
+    if (!selectedPreset) {
+      alert('Please select a preset');
+      return;
+    }
+
+    setExecutingPreset(true);
+    setPresetProgress({ current: 0, total: 0, status: 'Starting...' });
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/execute_preset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preset_name: selectedPreset })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to execute preset');
+      }
+
+      const data = await response.json();
+      
+      setPresetProgress(null);
+      
+      let message = `✅ Preset "${data.preset_name}" executed!\n\n`;
+      message += `✓ Generated: ${data.processed} vectors\n`;
+      
+      if (data.failed > 0) {
+        message += `✗ Failed: ${data.failed} datasets\n\n`;
+        message += 'Errors:\n' + data.errors.join('\n');
+      }
+      
+      if (data.vectors.length > 0) {
+        message += '\n\nGenerated vectors:\n';
+        data.vectors.forEach(v => {
+          message += `• ${v.name} (Layer ${v.layer}, ${v.pair_count} pairs)\n`;
+        });
+      }
+      
+      alert(message);
+      
+      // Notify parent to reload vectors list
+      if (onVectorGenerated) {
+        onVectorGenerated();
+      }
+      
+      // Reset selection
+      setSelectedPreset('');
+      
+    } catch (err) {
+      setPresetProgress(null);
+      alert(`❌ Error executing preset: ${err.message}`);
+      console.error('Error executing preset:', err);
+    } finally {
+      setExecutingPreset(false);
+    }
+  };
+
   const exportDataset = () => {
     const dataset = {
       metadata: {
@@ -224,6 +310,74 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
               style={{ display: 'none' }}
             />
           </label>
+        </div>
+      </div>
+
+      {/* Preset Manager Section */}
+      <div className="preset-manager">
+        <div className="preset-header">
+          <h3>📦 Preset Manager</h3>
+          <button 
+            onClick={loadPresets} 
+            className="refresh-button"
+            disabled={loadingPresets || executingPreset}
+            title="Refresh presets list"
+          >
+            🔄 {loadingPresets ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
+        
+        <div className="preset-content">
+          <div className="preset-selector">
+            <label>Select Preset:</label>
+            <select 
+              value={selectedPreset} 
+              onChange={(e) => setSelectedPreset(e.target.value)}
+              disabled={executingPreset || presets.length === 0}
+            >
+              <option value="">-- Choose a preset --</option>
+              {presets.map(preset => (
+                <option key={preset.name} value={preset.name}>
+                  {preset.name} ({preset.dataset_count} dataset{preset.dataset_count !== 1 ? 's' : ''})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedPreset && (
+            <div className="preset-details">
+              {presets.find(p => p.name === selectedPreset)?.datasets.map((dataset, idx) => (
+                <div key={idx} className="dataset-info">
+                  <span className="dataset-name">{dataset.metadata.name || dataset.filename}</span>
+                  <span className="dataset-meta">
+                    Layer {dataset.metadata.target_layer || 'auto'} • {dataset.pair_count} pair{dataset.pair_count !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={executePreset}
+            disabled={!selectedPreset || executingPreset}
+            className="execute-preset-button"
+          >
+            {executingPreset 
+              ? `⏳ Processing preset...` 
+              : `🚀 Execute Preset`}
+          </button>
+
+          {presetProgress && (
+            <div className="preset-progress">
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill" 
+                  style={{ width: `${(presetProgress.current / presetProgress.total) * 100}%` }}
+                />
+              </div>
+              <div className="progress-text">{presetProgress.status}</div>
+            </div>
+          )}
         </div>
       </div>
 
