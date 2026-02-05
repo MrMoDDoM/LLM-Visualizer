@@ -31,6 +31,9 @@ function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex })
   const [isEmbDragging, setIsEmbDragging] = useState(false);
   const [embDragStart, setEmbDragStart] = useState({ x: 0, y: 0 });
   
+  // Tab state for visualizations panel
+  const [activeTab, setActiveTab] = useState('hidden-states'); // 'hidden-states' or 'analysis'
+  
   const canvasRef = useRef(null);
   const embeddingCanvasRef = useRef(null);
   const timelineCanvasRef = useRef(null);
@@ -246,20 +249,55 @@ function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex })
 
   return (
     <div className="visualization-panel">
-      <h2>📊 Hidden States Visualization</h2>
-
-      {/* Generated Text - moved to top */}
-      <div className="generated-text">
-        <h3>📝 Generated Text</h3>
+      {/* Generated Text Panel - Only text, no tokens */}
+      <div className="text-panel">
+        <div className="text-panel-header">
+          <h2>📝 Generated Text</h2>
+        </div>
         <div className="text-content">
           {generationResult.generated_text}
         </div>
       </div>
 
-      {/* Normalization Controls Only */}
-      <div className="controls-section">
-        <div className="normalization-controls">
-          <div className="normalization-modes">
+      {/* Visualizations Panel with Tabs */}
+      <div className="visualizations-panel">
+        {/* Tab Navigation */}
+        <div className="viz-tab-navigation">
+          <button
+            className={`viz-tab-button ${activeTab === 'hidden-states' ? 'active' : ''}`}
+            onClick={() => setActiveTab('hidden-states')}
+          >
+            🔥 Hidden States
+          </button>
+          <button
+            className={`viz-tab-button ${activeTab === 'analysis' ? 'active' : ''}`}
+            onClick={() => setActiveTab('analysis')}
+          >
+            📊 Analysis
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'hidden-states' ? (
+          <div className="viz-tab-content">
+            {/* Token chips for navigation */}
+            <div className="token-chips">
+              {generationResult.tokens.map((token, idx) => (
+                <span 
+                  key={idx} 
+                  className={`token-chip ${idx === currentTokenIndex ? 'active' : ''}`}
+                  onClick={() => handleTokenChipClick(idx)}
+                  title={`Click to view token ${idx}: "${token}"`}
+                >
+                  {token}
+                </span>
+              ))}
+            </div>
+
+            {/* Normalization Controls Only */}
+            <div className="controls-section">
+          <div className="normalization-controls">
+            <div className="normalization-modes">
             <label>
               <input
                 type="radio"
@@ -499,21 +537,18 @@ function VisualizationPanel({ apiBaseUrl, generationResult, currentTokenIndex })
               ))}
             </div>
           </div>
-          
-          <div className="token-list">
-            {generationResult.tokens.map((token, idx) => (
-              <span
-                key={idx}
-                className={`token-chip ${idx === currentTokenIndex ? 'active' : ''}`}
-                onClick={() => handleTokenChipClick(idx)}
-              >
-                {token}
-              </span>
-            ))}
-          </div>
         </div>
       )}
-
+          </div>
+        ) : (
+          <div className="viz-tab-content">
+            <div className="placeholder-content">
+              <h3>📊 Analysis Tab</h3>
+              <p>This section is under development. Advanced analysis features will be added here.</p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

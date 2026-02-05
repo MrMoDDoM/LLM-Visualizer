@@ -1,7 +1,157 @@
 .visualization-panel {
   display: flex;
   flex-direction: column;
-  gap: 25px;
+  gap: 0; /* No gap between text and visualizations panels */
+}
+
+/* Text Panel - Top Section */
+.text-panel {
+  background: linear-gradient(135deg, #1a1f3a 0%, #2a1a3a 100%);
+  border: 2px solid #667eea;
+  border-radius: 12px 12px 0 0; /* Rounded top only */
+  padding: 25px;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+}
+
+.text-panel-header {
+  margin-bottom: 15px;
+}
+
+.text-panel-header h2 {
+  margin: 0;
+  color: #c4b5fd;
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.text-panel .text-content {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  color: #e0e0e0;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  font-family: 'Georgia', serif;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Visualizations Panel - Bottom Section */
+.visualizations-panel {
+  background: #0f1419;
+  border: 2px solid #374151;
+  border-top: none; /* Connect to text panel */
+  border-radius: 0 0 12px 12px; /* Rounded bottom only */
+  padding: 0; /* Remove padding, tabs will handle it */
+}
+
+/* Tab Navigation */
+.viz-tab-navigation {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #374151;
+  background: #0a0e27;
+}
+
+.viz-tab-button {
+  flex: 1;
+  padding: 15px 20px;
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  border-bottom: 3px solid transparent;
+  position: relative;
+}
+
+.viz-tab-button:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #c4b5fd;
+}
+
+.viz-tab-button.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  background: rgba(102, 126, 234, 0.15);
+}
+
+/* Tab Content */
+.viz-tab-content {
+  padding: 25px;
+}
+
+/* Token Chips in Visualization Tab */
+.viz-tab-content .token-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.viz-tab-content .token-chip {
+  padding: 6px 12px;
+  background: rgba(102, 126, 234, 0.2);
+  border: 1px solid rgba(102, 126, 234, 0.4);
+  border-radius: 6px;
+  color: #c4b5fd;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+  font-family: 'Courier New', monospace;
+}
+
+.viz-tab-content .token-chip:hover {
+  background: rgba(102, 126, 234, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.viz-tab-content .token-chip.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #764ba2;
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.6);
+}
+
+/* Placeholder Content */
+.placeholder-content {
+  text-align: center;
+  padding: 60px 20px;
+  color: #9ca3af;
+}
+
+.placeholder-content h3 {
+  color: #c4b5fd;
+  margin-bottom: 15px;
+  font-size: 1.3rem;
+}
+
+.placeholder-content p {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.visualizations-header {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #374151;
+}
+
+.visualizations-header h2 {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 1.2rem;
 }
 
 .controls-section {
