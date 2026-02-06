@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# LLM Hidden States Visualizer - Start Script
+# LLM Alignment Tool - Start Script
 # This script starts both backend and frontend servers
 
-echo "🧠 Starting LLM Hidden States Visualizer..."
+echo "⚖️  Starting LLM Alignment Tool..."
 echo ""
 
 # Colors
@@ -80,7 +80,7 @@ echo -e "${GREEN}✅ Frontend running on http://localhost:3000 (PID: $FRONTEND_P
 echo ""
 
 echo "=========================================="
-echo -e "${GREEN}🎉 LLM Hidden States Visualizer is running!${NC}"
+echo -e "${GREEN}🎉 LLM Alignment Tool is running!${NC}"
 echo "=========================================="
 echo ""
 echo "📍 Backend API:  http://localhost:8000"

@@ -1,5 +1,5 @@
 """
-LLM Hidden States Visualizer - Backend Server
+LLM Alignment Tool - Backend Server
 FastAPI server for LLM inference with hidden state extraction and steering vector manipulation
 """
 
@@ -18,7 +18,7 @@ import json
 import os
 import traceback
 
-app = FastAPI(title="LLM Hidden States Visualizer")
+app = FastAPI(title="LLM Alignment Tool")
 
 # CORS middleware for React frontend
 app.add_middleware(
@@ -62,6 +62,7 @@ class ModelLoadRequest(BaseModel):
 
 class GenerationRequest(BaseModel):
     prompt: str
+    system_prompt: Optional[str] = None  # Optional system prompt prepended to user prompt
     max_new_tokens: int = 20
     temperature: float = 1.0
     top_k: int = 50
@@ -138,7 +139,7 @@ def create_heatmap_image(data: np.ndarray, colormap: str = "coolwarm") -> str:
 # API Endpoints
 @app.get("/")
 async def root():
-    return {"message": "LLM Hidden States Visualizer API", "status": "running"}
+    return {"message": "LLM Alignment Tool API", "status": "running"}
 
 @app.get("/status")
 async def get_status():
@@ -288,8 +289,14 @@ async def generate_text(request: GenerationRequest):
         model_state.tokens_cache = []
         model_state.embedding_cache = []
         
+        # Construct full prompt with optional system prompt
+        full_prompt = request.prompt
+        if request.system_prompt:
+            # Prepend system prompt with a separator
+            full_prompt = f"{request.system_prompt}\n\n{request.prompt}"
+        
         # Tokenize input
-        inputs = model_state.tokenizer(request.prompt, return_tensors="pt").to(model_state.model.device)
+        inputs = model_state.tokenizer(full_prompt, return_tensors="pt").to(model_state.model.device)
         input_ids = inputs.input_ids
         
         # Prepare steering hooks if needed

@@ -3,6 +3,9 @@ import './GenerationPanel.css';
 
 function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationComplete, onError, steeringConfigs, onSteeringConfigsChange }) {
   const [prompt, setPrompt] = useState('Tell me a short story about a robot.');
+  const [systemPrompt, setSystemPrompt] = useState('You are a helpful, creative AI assistant.');
+  const [showSystemPromptModal, setShowSystemPromptModal] = useState(false);
+  const [tempSystemPrompt, setTempSystemPrompt] = useState('');
   const [maxTokens, setMaxTokens] = useState(20);
   const [temperature, setTemperature] = useState(1.0);
   const [topK, setTopK] = useState(50);
@@ -31,6 +34,20 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [generating, prompt]); // Re-bind when these change
+
+  const openSystemPromptModal = () => {
+    setTempSystemPrompt(systemPrompt);
+    setShowSystemPromptModal(true);
+  };
+
+  const closeSystemPromptModal = () => {
+    setShowSystemPromptModal(false);
+  };
+
+  const saveSystemPrompt = () => {
+    setSystemPrompt(tempSystemPrompt);
+    setShowSystemPromptModal(false);
+  };
 
   const addSteeringConfig = () => {
     if (steeringVectors.length === 0) {
@@ -79,6 +96,7 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
     try {
       const requestBody = {
         prompt,
+        system_prompt: systemPrompt,
         max_new_tokens: maxTokens,
         temperature,
         top_k: topK,
@@ -129,7 +147,17 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
       <h2>🎯 Generation Settings</h2>
 
       <div className="form-group">
-        <label>Prompt:</label>
+        <div className="prompt-header">
+          <label>Prompt:</label>
+          <button
+            onClick={openSystemPromptModal}
+            disabled={generating}
+            className="system-prompt-button"
+            title="Configure system prompt"
+          >
+            ⚙️ System Prompt
+          </button>
+        </div>
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
@@ -137,6 +165,11 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
           disabled={generating}
           placeholder="Enter your prompt here..."
         />
+        {systemPrompt && (
+          <div className="system-prompt-preview">
+            <small>📋 System: {systemPrompt.substring(0, 60)}{systemPrompt.length > 60 ? '...' : ''}</small>
+          </div>
+        )}
       </div>
 
       <div className="params-grid">
@@ -341,6 +374,81 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
           </div>
         )}
       </div>
+
+      {/* System Prompt Modal */}
+      {showSystemPromptModal && (
+        <div className="modal-overlay" onClick={closeSystemPromptModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>⚙️ System Prompt Configuration</h3>
+              <button className="modal-close-button" onClick={closeSystemPromptModal}>✕</button>
+            </div>
+            
+            <div className="modal-body">
+              <p className="modal-description">
+                The system prompt is prepended to your user prompt and helps set the behavior and personality of the AI.
+              </p>
+              
+              <div className="form-group">
+                <label>System Prompt:</label>
+                <textarea
+                  value={tempSystemPrompt}
+                  onChange={(e) => setTempSystemPrompt(e.target.value)}
+                  rows={8}
+                  placeholder="You are a helpful AI assistant..."
+                  className="system-prompt-textarea"
+                />
+                <small className="char-count">{tempSystemPrompt.length} characters</small>
+              </div>
+
+              <div className="preset-system-prompts">
+                <label>Quick Presets:</label>
+                <div className="preset-buttons">
+                  <button
+                    onClick={() => setTempSystemPrompt('You are a helpful, creative AI assistant.')}
+                    className="preset-button"
+                  >
+                    Default
+                  </button>
+                  <button
+                    onClick={() => setTempSystemPrompt('You are a professional writer with a talent for storytelling.')}
+                    className="preset-button"
+                  >
+                    Storyteller
+                  </button>
+                  <button
+                    onClick={() => setTempSystemPrompt('You are a technical expert who provides clear, detailed explanations.')}
+                    className="preset-button"
+                  >
+                    Technical
+                  </button>
+                  <button
+                    onClick={() => setTempSystemPrompt('You are a friendly, casual conversationalist.')}
+                    className="preset-button"
+                  >
+                    Casual
+                  </button>
+                  <button
+                    onClick={() => setTempSystemPrompt('')}
+                    className="preset-button clear"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button onClick={closeSystemPromptModal} className="cancel-button">
+                Cancel
+              </button>
+              <button onClick={saveSystemPrompt} className="save-button">
+                ✓ Save System Prompt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

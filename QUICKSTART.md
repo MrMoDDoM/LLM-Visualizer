@@ -1,4 +1,4 @@
-# 🚀 Quick Start - LLM Hidden States Visualizer
+# 🚀 Quick Start - LLM Alignment Tool
 
 Quick guide to get started in 5 minutes!
 

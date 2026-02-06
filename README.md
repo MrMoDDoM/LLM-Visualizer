@@ -1,4 +1,4 @@
-# 🧠 LLM Hidden States Visualizer
+# ⚖️ LLM Alignment Tool
 
 An interactive web tool to visualize and manipulate hidden states of Decoder-based LLM models during inference, with support for Steering Vectors.
 

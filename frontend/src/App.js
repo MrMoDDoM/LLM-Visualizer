@@ -263,7 +263,7 @@ function App() {
       <header className="App-header">
         <div className="header-row">
           <div className="header-left">
-            <h1>🧠 LLM Hidden States Visualizer</h1>
+            <h1>⚖️ LLM Alignment Tool</h1>
           </div>
           
           <div className="header-right">
