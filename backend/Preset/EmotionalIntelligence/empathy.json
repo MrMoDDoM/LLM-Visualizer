@@ -4,7 +4,8 @@
     "target_layer": 16,
     "description": "Promotes empathetic and compassionate responses to others' feelings",
     "created_at": "2026-02-05T10:00:00.000Z",
-    "version": "1.0"
+    "version": "1.0",
+    "category": "emotion"
   },
   "pairs": [
     {

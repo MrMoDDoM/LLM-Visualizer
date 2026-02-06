@@ -2,139 +2,13 @@ import React, { useState, useEffect } from 'react';
 import './ContrastiveSearch.css';
 
 function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }) {
-  const [contrastivePairs, setContrastivePairs] = useState([
-    {
-      id: Date.now(),
-      positive: 'Love and compassion are wonderful',
-      negative: 'Hate and cruelty are terrible'
-    }
-  ]);
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState(null);
-  const [vectorName, setVectorName] = useState('');
-  const [targetLayer, setTargetLayer] = useState(null); // null = use default (middle layer)
-  const [datasetDescription, setDatasetDescription] = useState('');
-  
-  // Preset management
   const [presets, setPresets] = useState([]);
   const [selectedPreset, setSelectedPreset] = useState('');
   const [loadingPresets, setLoadingPresets] = useState(false);
   const [executingPreset, setExecutingPreset] = useState(false);
   const [presetProgress, setPresetProgress] = useState(null);
+  const [uploadingDataset, setUploadingDataset] = useState(false);
 
-  const addPair = () => {
-    setContrastivePairs([
-      ...contrastivePairs,
-      {
-        id: Date.now(),
-        positive: '',
-        negative: ''
-      }
-    ]);
-  };
-
-  const removePair = (id) => {
-    if (contrastivePairs.length === 1) {
-      alert('At least one pair is required');
-      return;
-    }
-    setContrastivePairs(contrastivePairs.filter(pair => pair.id !== id));
-  };
-
-  const updatePair = (id, field, value) => {
-    setContrastivePairs(contrastivePairs.map(pair =>
-      pair.id === id ? { ...pair, [field]: value } : pair
-    ));
-  };
-
-  const duplicatePair = (id) => {
-    const pairToDuplicate = contrastivePairs.find(pair => pair.id === id);
-    if (pairToDuplicate) {
-      setContrastivePairs([
-        ...contrastivePairs,
-        {
-          id: Date.now(),
-          positive: pairToDuplicate.positive,
-          negative: pairToDuplicate.negative
-        }
-      ]);
-    }
-  };
-
-  const handleGenerate = async () => {
-    // Validate input
-    const emptyPairs = contrastivePairs.filter(
-      pair => !pair.positive.trim() || !pair.negative.trim()
-    );
-    
-    if (emptyPairs.length > 0) {
-      alert('All pairs must have both positive and negative text');
-      return;
-    }
-
-    if (!vectorName.trim()) {
-      alert('Please enter a name for the steering vector');
-      return;
-    }
-
-    setGenerating(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${apiBaseUrl}/generate_steering_vector`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          vector_name: vectorName,
-          pairs: contrastivePairs.map(pair => ({
-            positive: pair.positive,
-            negative: pair.negative
-          })),
-          target_layer: targetLayer // Use specified layer or null for default (middle layer)
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (onError) {
-          onError(errorData);
-        } else {
-          throw new Error(errorData.detail || 'Failed to generate steering vector');
-        }
-        return;
-      }
-
-      const data = await response.json();
-      
-      alert(`✅ Successfully generated steering vector "${data.name}"!\n\n` +
-            `Shape: [${data.shape.join(', ')}]\n` +
-            `Norm: ${data.norm.toFixed(4)}\n` +
-            `Layer: ${data.layer}\n` +
-            `Pairs used: ${data.num_pairs}`);
-      
-      // Notify parent to reload vectors list
-      if (onVectorGenerated) {
-        onVectorGenerated();
-      }
-      
-      // Reset only the vector name, keep the dataset
-      setVectorName('');
-      
-    } catch (err) {
-      if (onError) {
-        onError({ message: err.message, stacktrace: null });
-      } else {
-        setError(err.message);
-      }
-      console.error('Error generating steering vector:', err);
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  // Load available presets on mount
   useEffect(() => {
     loadPresets();
   }, []);
@@ -176,15 +50,12 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
       }
 
       const data = await response.json();
-      
       setPresetProgress(null);
       
-      let message = `✅ Preset "${data.preset_name}" executed!\n\n`;
-      message += `✓ Generated: ${data.processed} vectors\n`;
+      let message = `✅ Preset "${data.preset_name}" executed!\n\n✓ Generated: ${data.processed} vectors\n`;
       
       if (data.failed > 0) {
-        message += `✗ Failed: ${data.failed} datasets\n\n`;
-        message += 'Errors:\n' + data.errors.join('\n');
+        message += `✗ Failed: ${data.failed} datasets\n\nErrors:\n` + data.errors.join('\n');
       }
       
       if (data.vectors.length > 0) {
@@ -196,12 +67,10 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
       
       alert(message);
       
-      // Notify parent to reload vectors list
       if (onVectorGenerated) {
         onVectorGenerated();
       }
       
-      // Reset selection
       setSelectedPreset('');
       
     } catch (err) {
@@ -213,69 +82,72 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
     }
   };
 
-  const exportDataset = () => {
-    const dataset = {
-      metadata: {
-        name: vectorName || 'Untitled Dataset',
-        target_layer: targetLayer,
-        description: datasetDescription || '',
-        created_at: new Date().toISOString(),
-        version: '1.0'
-      },
-      pairs: contrastivePairs
-    };
-    
-    const dataStr = JSON.stringify(dataset, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    const filename = vectorName ? `${vectorName}_dataset.json` : `contrastive_dataset_${Date.now()}.json`;
-    link.download = filename;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const importDataset = (event) => {
+  const uploadDataset = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
+    setUploadingDataset(true);
+
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const imported = JSON.parse(e.target.result);
+        let vectorName, pairs, targetLayer;
         
-        // Check if new format (with metadata) or old format (array only)
         if (imported.metadata && Array.isArray(imported.pairs)) {
-          // New format with metadata
-          const { metadata, pairs } = imported;
-          
-          // Populate UI fields from metadata
-          if (metadata.name) setVectorName(metadata.name);
-          if (metadata.target_layer !== undefined) setTargetLayer(metadata.target_layer);
-          if (metadata.description) setDatasetDescription(metadata.description);
-          
-          // Ensure each pair has an ID
-          const withIds = pairs.map(pair => ({
-            ...pair,
-            id: pair.id || Date.now() + Math.random()
-          }));
-          setContrastivePairs(withIds);
-          
-          alert(`✅ Imported dataset "${metadata.name}" with ${withIds.length} pairs`);
+          vectorName = imported.metadata.name;
+          pairs = imported.pairs;
+          targetLayer = imported.metadata.target_layer;
         } else if (Array.isArray(imported)) {
-          // Old format (backward compatibility)
-          const withIds = imported.map(pair => ({
-            ...pair,
-            id: pair.id || Date.now() + Math.random()
-          }));
-          setContrastivePairs(withIds);
-          alert(`✅ Imported ${withIds.length} pairs (legacy format)`);
+          vectorName = file.name.replace('.json', '');
+          pairs = imported;
+          targetLayer = null;
         } else {
-          alert('❌ Invalid file format');
+          throw new Error('Invalid file format');
         }
+
+        const response = await fetch(`${apiBaseUrl}/generate_steering_vector`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            vector_name: vectorName,
+            pairs: pairs.map(pair => ({
+              positive: pair.positive,
+              negative: pair.negative
+            })),
+            target_layer: targetLayer,
+            category: imported.metadata?.category || 'extra'  // Add category from metadata
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          if (onError) {
+            onError(errorData);
+          } else {
+            throw new Error(errorData.detail || 'Failed to generate steering vector');
+          }
+          return;
+        }
+
+        const data = await response.json();
+        
+        alert(`✅ Successfully generated steering vector "${data.name}"!\n\nShape: [${data.shape.join(', ')}]\nNorm: ${data.norm.toFixed(4)}\nLayer: ${data.layer}\nPairs used: ${data.num_pairs}`);
+        
+        if (onVectorGenerated) {
+          onVectorGenerated();
+        }
+        
       } catch (err) {
-        alert('❌ Error parsing JSON file: ' + err.message);
+        if (onError) {
+          onError({ message: err.message, stacktrace: null });
+        } else {
+          alert('❌ Error processing file: ' + err.message);
+        }
+        console.error('Error uploading dataset:', err);
+      } finally {
+        setUploadingDataset(false);
+        event.target.value = '';
       }
     };
     reader.readAsText(file);
@@ -284,39 +156,15 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
   return (
     <div className="contrastive-search">
       <div className="contrastive-header">
-        <div className="header-content">
-          <h2>🔍 Contrastive Activation Search</h2>
-          <div className="info-section-inline">
-            <h4>ℹ️ How it works:</h4>
-            <ol>
-              <li><strong>Create pairs:</strong> Each pair should represent the same concept but with opposite sentiment/meaning</li>
-              <li><strong>Positive examples:</strong> Text that represents the desired behavior/concept</li>
-              <li><strong>Negative examples:</strong> Text that represents the opposite behavior/concept</li>
-              <li><strong>Generate:</strong> The algorithm will compute the difference in activations to create a steering vector</li>
-            </ol>
-          </div>
-        </div>
-        <div className="header-actions">
-          <button onClick={exportDataset} className="export-button" disabled={generating}>
-            💾 Export Dataset
-          </button>
-          <label className="import-button">
-            📂 Import Dataset
-            <input
-              type="file"
-              accept=".json"
-              onChange={importDataset}
-              disabled={generating}
-              style={{ display: 'none' }}
-            />
-          </label>
-        </div>
+        <h2>🔍 Steering Vector Generation</h2>
+        <p className="header-description">
+          Generate steering vectors from preset collections or upload individual dataset files
+        </p>
       </div>
 
-      {/* Preset Manager Section */}
       <div className="preset-manager">
         <div className="preset-header">
-          <h3>📦 Preset Manager</h3>
+          <h3>📦 Preset Collections</h3>
           <button 
             onClick={loadPresets} 
             className="refresh-button"
@@ -346,12 +194,25 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
 
           {selectedPreset && (
             <div className="preset-details">
+              <h4>Datasets in this preset:</h4>
               {presets.find(p => p.name === selectedPreset)?.datasets.map((dataset, idx) => (
                 <div key={idx} className="dataset-info">
-                  <span className="dataset-name">{dataset.metadata.name || dataset.filename}</span>
+                  <div className="dataset-header">
+                    <span className="dataset-name">{dataset.metadata.name || dataset.filename}</span>
+                    {dataset.metadata.category && (
+                      <span className={`category-badge badge-${dataset.metadata.category}`}>
+                        {dataset.metadata.category === 'emotion' ? '😊 Emotion' : 
+                         dataset.metadata.category === 'alignment' ? '⚖️ Alignment' : 
+                         '⚙️ Extra'}
+                      </span>
+                    )}
+                  </div>
                   <span className="dataset-meta">
                     Layer {dataset.metadata.target_layer || 'auto'} • {dataset.pair_count} pair{dataset.pair_count !== 1 ? 's' : ''}
                   </span>
+                  {dataset.metadata.description && (
+                    <span className="dataset-description">{dataset.metadata.description}</span>
+                  )}
                 </div>
               ))}
             </div>
@@ -362,9 +223,7 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
             disabled={!selectedPreset || executingPreset}
             className="execute-preset-button"
           >
-            {executingPreset 
-              ? `⏳ Processing preset...` 
-              : `🚀 Execute Preset`}
+            {executingPreset ? `⏳ Processing preset...` : `🚀 Execute Preset`}
           </button>
 
           {presetProgress && (
@@ -381,125 +240,32 @@ function ContrastiveSearch({ apiBaseUrl, modelInfo, onVectorGenerated, onError }
         </div>
       </div>
 
-      <div className="vector-config-section">
-        <div className="vector-naming">
-          <label>Steering Vector Name:</label>
-          <input
-            type="text"
-            value={vectorName}
-            onChange={(e) => setVectorName(e.target.value)}
-            placeholder="e.g., positive_sentiment, honesty, creativity"
-            disabled={generating}
-            className="vector-name-input"
-          />
+      <div className="upload-section">
+        <div className="upload-header">
+          <h3>📂 Upload Dataset File</h3>
         </div>
-
-        <div className="layer-selection">
-          <label>Target Layer:</label>
-          <input
-            type="number"
-            value={targetLayer === null ? '' : targetLayer}
-            onChange={(e) => {
-              const val = e.target.value;
-              setTargetLayer(val === '' ? null : parseInt(val));
-            }}
-            placeholder={`Auto (${modelInfo ? Math.floor(modelInfo.num_layers / 2) : 'N/A'})`}
-            disabled={generating}
-            min={0}
-            max={modelInfo ? modelInfo.num_layers - 1 : 0}
-            className="layer-input"
-          />
-          <span className="layer-info">
-            {targetLayer === null 
-              ? `Using middle layer (${modelInfo ? Math.floor(modelInfo.num_layers / 2) : 'N/A'})` 
-              : `Layer ${targetLayer} of ${modelInfo ? modelInfo.num_layers - 1 : 'N/A'}`
-            }
-          </span>
-        </div>
-
-        <div className="dataset-description">
-          <label>Dataset Description (optional):</label>
-          <textarea
-            value={datasetDescription}
-            onChange={(e) => setDatasetDescription(e.target.value)}
-            placeholder="Describe the purpose and characteristics of this dataset..."
-            disabled={generating}
-            className="description-textarea"
-            rows={3}
-          />
+        <div className="upload-content">
+          <p className="upload-description">
+            Upload a JSON file containing contrastive pairs to generate a steering vector
+          </p>
+          <label className="upload-button">
+            {uploadingDataset ? '⏳ Processing...' : '📤 Upload Dataset JSON'}
+            <input
+              type="file"
+              accept=".json"
+              onChange={uploadDataset}
+              disabled={uploadingDataset || executingPreset}
+              style={{ display: 'none' }}
+            />
+          </label>
         </div>
       </div>
 
-      <button
-        onClick={handleGenerate}
-        disabled={generating || contrastivePairs.length === 0 || !vectorName.trim()}
-        className="generate-vector-button"
-      >
-        {generating ? '⏳ Generating Steering Vector...' : '🚀 Generate Steering Vector'}
-      </button>
-
-      <div className="dataset-container">
-        <div className="dataset-header">
-          <h3>📝 Contrastive Pairs ({contrastivePairs.length})</h3>
-          <button onClick={addPair} disabled={generating} className="add-pair-button">
-            + Add Pair
-          </button>
+      {presets.length === 0 && !loadingPresets && (
+        <div className="empty-state">
+          <p>📁 No presets found. Create preset folders in the <code>backend/Preset/</code> directory.</p>
         </div>
-
-        <div className="pairs-grid-header">
-          <div className="column-label positive-label">✅ Positive Examples</div>
-          <div className="column-label negative-label">❌ Negative Examples</div>
-        </div>
-
-        <div className="pairs-list">
-          {contrastivePairs.map((pair, index) => (
-            <div key={pair.id} className="pair-row">
-              <div className="pair-number">{index + 1}</div>
-              
-              <div className="pair-content">
-                <textarea
-                  value={pair.positive}
-                  onChange={(e) => updatePair(pair.id, 'positive', e.target.value)}
-                  placeholder="Enter positive example..."
-                  disabled={generating}
-                  className="pair-textarea positive-textarea"
-                  rows={3}
-                />
-                
-                <textarea
-                  value={pair.negative}
-                  onChange={(e) => updatePair(pair.id, 'negative', e.target.value)}
-                  placeholder="Enter negative example..."
-                  disabled={generating}
-                  className="pair-textarea negative-textarea"
-                  rows={3}
-                />
-              </div>
-
-              <div className="pair-actions">
-                <button
-                  onClick={() => duplicatePair(pair.id)}
-                  disabled={generating}
-                  className="duplicate-button"
-                  title="Duplicate this pair"
-                >
-                  📋
-                </button>
-                <button
-                  onClick={() => removePair(pair.id)}
-                  disabled={generating || contrastivePairs.length === 1}
-                  className="remove-pair-button"
-                  title="Remove this pair"
-                >
-                  🗑️
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {error && <div className="error-message">❌ {error}</div>}
+      )}
     </div>
   );
 }

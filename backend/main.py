@@ -92,6 +92,7 @@ class ContrastiveSearchRequest(BaseModel):
     vector_name: str
     pairs: List[ContrastivePair]
     target_layer: Optional[int] = None  # If None, will use middle layer
+    category: Optional[str] = "extra"  # Categories: "emotion", "alignment", "extra"
 
 # Helper functions
 def normalize_hidden_state(hidden_state: torch.Tensor, mode: str = "auto", vmin: float = None, vmax: float = None):
@@ -593,10 +594,11 @@ async def generate_steering_vector(request: ContrastiveSearchRequest):
             "shape": list(steering_vector.shape),
             "norm": float(torch.norm(steering_vector).item()),
             "layer": target_layer,
-            "num_pairs": len(request.pairs)
+            "num_pairs": len(request.pairs),
+            "category": request.category  # Add category field
         }
         
-        print(f"✓ Generated steering vector '{request.vector_name}': shape {steering_vector.shape}, norm {torch.norm(steering_vector).item():.4f}")
+        print(f"✓ Generated steering vector '{request.vector_name}': shape {steering_vector.shape}, norm {torch.norm(steering_vector).item():.4f}, category: {request.category}")
         
         return {
             "success": True,
@@ -653,7 +655,11 @@ async def download_steering_vector(name: str):
         raise HTTPException(status_code=500, detail=f"Error downloading vector: {str(e)}")
 
 @app.post("/upload_steering_vector")
-async def upload_steering_vector(file: UploadFile = File(...), name: str = ""):
+async def upload_steering_vector(
+    file: UploadFile = File(...), 
+    name: str = "",
+    category: str = "extra"  # Add category parameter
+):
     """Upload a steering vector (.pt file)"""
     try:
         # Read file content
@@ -685,7 +691,8 @@ async def upload_steering_vector(file: UploadFile = File(...), name: str = ""):
         model_state.steering_vectors[vector_name] = {
             "vector": vector,
             "shape": list(vector.shape),
-            "norm": float(torch.norm(vector).item())
+            "norm": float(torch.norm(vector).item()),
+            "category": category  # Add category field
         }
         
         print(f"Loaded steering vector '{vector_name}': shape {vector.shape}, norm {torch.norm(vector).item():.4f}")
@@ -714,7 +721,8 @@ async def list_steering_vectors():
             "name": name,
             "shape": shape,
             "norm": norm,
-            "layer": info.get("layer", "unknown")
+            "layer": info.get("layer", "unknown"),
+            "category": info.get("category", "extra")  # Add category to response
         })
     return {"vectors": vectors_info}
 
@@ -883,11 +891,13 @@ async def execute_preset(request: ExecutePresetRequest):
                     pairs = data['pairs']
                     vector_name = metadata.get('name', filename.replace('.json', ''))
                     target_layer = metadata.get('target_layer', None)
+                    category = metadata.get('category', 'extra')  # Extract category from metadata
                 else:
                     # Old format
                     pairs = data if isinstance(data, list) else []
                     vector_name = filename.replace('.json', '')
                     target_layer = None
+                    category = 'extra'  # Default category for old format
                 
                 if not pairs:
                     errors.append(f"{filename}: No pairs found")
@@ -954,7 +964,8 @@ async def execute_preset(request: ExecutePresetRequest):
                     "layer": target_layer,
                     "shape": list(steering_vector.shape),
                     "norm": float(torch.norm(steering_vector).item()),
-                    "num_pairs": len(pairs)
+                    "num_pairs": len(pairs),
+                    "category": category  # Add category to stored vector
                 }
                 
                 generated_vectors.append({

@@ -39,12 +39,14 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
     }
     
     const defaultLayer = 16; // Default layer is now fixed at 16
+    const firstVector = steeringVectors[0];
     const newConfig = {
       id: Date.now(),
-      vector_name: steeringVectors[0].name,
+      vector_name: firstVector.name,
       layer: defaultLayer,
       coefficient: 0.0, // Default coefficient is 0
-      enabled: true
+      enabled: true,
+      category: firstVector.category || 'extra'  // Add category from vector
     };
     onSteeringConfigsChange([...steeringConfigs, newConfig]);
   };
@@ -54,9 +56,20 @@ function GenerationPanel({ apiBaseUrl, modelInfo, steeringVectors, onGenerationC
   };
 
   const updateSteeringConfig = (id, field, value) => {
-    onSteeringConfigsChange(steeringConfigs.map(config =>
-      config.id === id ? { ...config, [field]: value } : config
-    ));
+    onSteeringConfigsChange(steeringConfigs.map(config => {
+      if (config.id === id) {
+        const updatedConfig = { ...config, [field]: value };
+        // If changing vector_name, also update the category
+        if (field === 'vector_name') {
+          const selectedVector = steeringVectors.find(v => v.name === value);
+          if (selectedVector) {
+            updatedConfig.category = selectedVector.category || 'extra';
+          }
+        }
+        return updatedConfig;
+      }
+      return config;
+    }));
   };
 
   const handleGenerate = async () => {

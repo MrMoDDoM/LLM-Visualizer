@@ -5,17 +5,7 @@ function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged, 
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedVector, setSelectedVector] = useState(null);
-  const [vectorImage, setVectorImage] = useState(null);
-  const [normalizationMode, setNormalizationMode] = useState('auto');
-  const [vmin, setVmin] = useState(-1.0);
-  const [vmax, setVmax] = useState(1.0);
   const [showModal, setShowModal] = useState(false);
-  
-  // Zoom and pan state for modal
-  const [scale, setScale] = useState(1);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
@@ -42,6 +32,7 @@ function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged, 
         const formData = new FormData();
         formData.append('file', file);
         formData.append('name', file.name.replace('.pt', ''));
+        formData.append('category', 'extra');  // Default to 'extra' for uploaded vectors
 
         const response = await fetch(`${apiBaseUrl}/upload_steering_vector`, {
           method: 'POST',
@@ -97,7 +88,6 @@ function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged, 
 
       if (selectedVector === name) {
         setSelectedVector(null);
-        setVectorImage(null);
       }
       
       onVectorsChanged();
@@ -107,79 +97,14 @@ function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged, 
     }
   };
 
-  const handleVisualizeVector = async (name) => {
+  const handleVisualizeVector = (name) => {
     setSelectedVector(name);
     setShowModal(true);
-    
-    try {
-      const normConfig = {
-        mode: normalizationMode,
-        vmin: normalizationMode === 'fixed' ? vmin : null,
-        vmax: normalizationMode === 'fixed' ? vmax : null
-      };
-
-      const response = await fetch(`${apiBaseUrl}/visualize_steering_vector/${name}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(normConfig),
-      });
-
-      if (!response.ok) {
-        throw new Error('Visualization failed');
-      }
-
-      const data = await response.json();
-      setVectorImage(data.image);
-
-    } catch (err) {
-      setError(err.message);
-      setShowModal(false);
-    }
   };
 
   const closeModal = () => {
     setShowModal(false);
     setSelectedVector(null);
-    setVectorImage(null);
-    // Reset zoom and pan
-    setScale(1);
-    setPosition({ x: 0, y: 0 });
-  };
-
-  // Zoom and pan handlers
-  const zoomIn = () => {
-    setScale(prevScale => Math.min(prevScale * 1.2, 5));
-  };
-
-  const zoomOut = () => {
-    setScale(prevScale => Math.max(prevScale / 1.2, 0.5));
-  };
-
-  const handleMouseDown = (e) => {
-    if (e.button === 0) { // Left click only
-      setIsDragging(true);
-      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
-    }
-  };
-
-  const handleMouseMove = (e) => {
-    if (isDragging) {
-      setPosition({
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y
-      });
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const resetZoom = () => {
-    setScale(1);
-    setPosition({ x: 0, y: 0 });
   };
 
   const handleDownloadVector = async (name) => {
@@ -271,117 +196,79 @@ function SteeringVectorManager({ apiBaseUrl, steeringVectors, onVectorsChanged, 
         )}
       </div>
 
-      {/* Modal for vector visualization */}
-      {showModal && (
+      {/* Modal for vector metadata */}
+      {showModal && selectedVector && (
         <div className="vector-modal-overlay" onClick={closeModal}>
           <div className="vector-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>👁️ Vector Preview: {selectedVector}</h3>
+              <h3>ℹ️ Vector Metadata: {selectedVector}</h3>
               <button className="modal-close-button" onClick={closeModal}>✕</button>
             </div>
 
-            <div className="normalization-controls">
-              <label>
-                <input
-                  type="radio"
-                  value="auto"
-                  checked={normalizationMode === 'auto'}
-                  onChange={() => setNormalizationMode('auto')}
-                />
-                Auto
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  value="fixed"
-                  checked={normalizationMode === 'fixed'}
-                  onChange={() => setNormalizationMode('fixed')}
-                />
-                Fixed
-              </label>
+            {/* Vector Metadata Display */}
+            {(() => {
+              const vector = steeringVectors.find(v => v.name === selectedVector);
+              if (!vector) return <div className="loading-message">Vector not found</div>;
               
-              {normalizationMode === 'fixed' && (
-                <div className="range-inputs">
-                  <input
-                    type="number"
-                    value={vmin}
-                    onChange={(e) => setVmin(parseFloat(e.target.value))}
-                    step="0.1"
-                    placeholder="Min"
-                  />
-                  <input
-                    type="number"
-                    value={vmax}
-                    onChange={(e) => setVmax(parseFloat(e.target.value))}
-                    step="0.1"
-                    placeholder="Max"
-                  />
-                </div>
-              )}
-              
-              <button onClick={() => handleVisualizeVector(selectedVector)}>
-                🔄 Refresh
-              </button>
-            </div>
+              return (
+                <div className="vector-metadata">
+                  <div className="metadata-section">
+                    <h4>📊 Basic Information</h4>
+                    <div className="metadata-grid">
+                      <div className="metadata-item">
+                        <span className="metadata-label">Name:</span>
+                        <span className="metadata-value">{vector.name}</span>
+                      </div>
+                      <div className="metadata-item">
+                        <span className="metadata-label">Category:</span>
+                        <span className={`metadata-value category-badge category-${vector.category || 'extra'}`}>
+                          {vector.category === 'emotion' ? '😊 Emotion' : 
+                           vector.category === 'alignment' ? '⚖️ Alignment' : 
+                           '⚙️ Extra'}
+                        </span>
+                      </div>
+                      <div className="metadata-item">
+                        <span className="metadata-label">Layer:</span>
+                        <span className="metadata-value">{vector.layer || 'unknown'}</span>
+                      </div>
+                    </div>
+                  </div>
 
-            {/* Zoom Controls */}
-            <div className="zoom-controls">
-              <button onClick={zoomOut} title="Zoom Out" disabled={scale <= 0.5}>
-                🔍− Zoom Out
-              </button>
-              <button onClick={resetZoom} title="Reset zoom">
-                ⊙ Reset
-              </button>
-              <button onClick={zoomIn} title="Zoom In" disabled={scale >= 5}>
-                🔍+ Zoom In
-              </button>
-            </div>
+                  <div className="metadata-section">
+                    <h4>🔢 Technical Details</h4>
+                    <div className="metadata-grid">
+                      <div className="metadata-item">
+                        <span className="metadata-label">Shape:</span>
+                        <span className="metadata-value">[{vector.shape.join(', ')}]</span>
+                      </div>
+                      <div className="metadata-item">
+                        <span className="metadata-label">Norm:</span>
+                        <span className="metadata-value">{vector.norm.toFixed(6)}</span>
+                      </div>
+                      <div className="metadata-item">
+                        <span className="metadata-label">Dimensions:</span>
+                        <span className="metadata-value">{vector.shape[0]}</span>
+                      </div>
+                    </div>
+                  </div>
 
-            {/* Vector Info Box */}
-            {steeringVectors.find(v => v.name === selectedVector) && (
-              <div className="modal-vector-info">
-                <div className="info-item">
-                  <strong>Shape:</strong> [{steeringVectors.find(v => v.name === selectedVector).shape.join(', ')}]
+                  <div className="metadata-section">
+                    <h4>💡 Usage Information</h4>
+                    <div className="usage-info">
+                      {vector.category === 'emotion' && (
+                        <p>🎯 <strong>Emotion vectors</strong> are controlled via the radar chart in the Generation Results section.</p>
+                      )}
+                      {vector.category === 'alignment' && (
+                        <p>⚖️ <strong>Alignment vectors</strong> are controlled via the moral alignment grid. Select this vector in the X or Y axis selector.</p>
+                      )}
+                      {(vector.category === 'extra' || !vector.category) && (
+                        <p>⚙️ <strong>Extra vectors</strong> are controlled via sliders in the Extra Steering Vectors section.</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="info-item">
-                  <strong>Norm:</strong> {steeringVectors.find(v => v.name === selectedVector).norm.toFixed(6)}
-                </div>
-                <div className="info-item">
-                  <strong>Zoom:</strong> {(scale * 100).toFixed(0)}%
-                </div>
-              </div>
-            )}
-
-            <div 
-              className="vector-image-container"
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-            >
-              {vectorImage ? (
-                <div style={{ 
-                  transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-                  transformOrigin: 'center center',
-                  transition: isDragging ? 'none' : 'transform 0.1s ease-out'
-                }}>
-                  <img
-                    src={`data:image/png;base64,${vectorImage}`}
-                    alt="Steering Vector"
-                    style={{ 
-                      width: '100%', 
-                      height: 'auto', 
-                      imageRendering: 'pixelated',
-                      pointerEvents: 'none',
-                      userSelect: 'none'
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="loading-message">Loading visualization...</div>
-              )}
-            </div>
+              );
+            })()}
           </div>
         </div>
       )}

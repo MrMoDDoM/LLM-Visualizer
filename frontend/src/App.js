@@ -4,7 +4,6 @@ import ModelLoader from './components/ModelLoader';
 import GenerationPanel from './components/GenerationPanel';
 import VisualizationPanel from './components/VisualizationPanel';
 import SteeringVectorManager from './components/SteeringVectorManager';
-import NavigationControls from './components/NavigationControls';
 import ContrastiveSearch from './components/ContrastiveSearch';
 import ErrorModal from './components/ErrorModal';
 
@@ -20,7 +19,6 @@ function App() {
   const [steeringVectors, setSteeringVectors] = useState([]);
   const [steeringConfigs, setSteeringConfigs] = useState([]);
   const [apiStatus, setApiStatus] = useState('checking');
-  const [currentTokenIndex, setCurrentTokenIndex] = useState(0);
   const [apiBaseUrl, setApiBaseUrl] = useState(DEFAULT_API_BASE);
   const [isEditingApi, setIsEditingApi] = useState(false);
   const [editingApiValue, setEditingApiValue] = useState(DEFAULT_API_BASE);
@@ -137,13 +135,59 @@ function App() {
     }
   }, [modelLoaded]);
 
-  // Expose updateTokenIndex to child components via window
+  // Auto-sync steeringConfigs when steeringVectors change
   useEffect(() => {
-    window.updateTokenIndex = setCurrentTokenIndex;
-    return () => {
-      delete window.updateTokenIndex;
-    };
-  }, []);
+    if (steeringVectors.length === 0) {
+      setSteeringConfigs([]);
+      return;
+    }
+
+    console.log('Syncing steeringConfigs from steeringVectors:', steeringVectors);
+
+    // Create a map of vector name to category for quick lookup
+    const vectorCategoryMap = {};
+    steeringVectors.forEach(vector => {
+      vectorCategoryMap[vector.name] = vector.category || 'extra';
+    });
+
+    // Update existing configs with correct category
+    const updatedConfigs = steeringConfigs
+      .filter(config => vectorCategoryMap.hasOwnProperty(config.vector_name))
+      .map(config => ({
+        ...config,
+        category: vectorCategoryMap[config.vector_name], // Update category from vector
+        layer: config.layer || steeringVectors.find(v => v.name === config.vector_name)?.layer || 16
+      }));
+
+    // Get existing config vector names
+    const existingVectorNames = updatedConfigs.map(c => c.vector_name);
+    
+    // Add new vectors as configs (only if not already present)
+    const newConfigs = [];
+    steeringVectors.forEach(vector => {
+      if (!existingVectorNames.includes(vector.name)) {
+        const newConfig = {
+          id: Date.now() + Math.random(), // Unique ID
+          vector_name: vector.name,
+          layer: vector.layer || 16,
+          coefficient: 0.0,
+          enabled: true,
+          category: vector.category || 'extra'
+        };
+        console.log(`Creating config for ${vector.name} with category: ${vector.category}`);
+        newConfigs.push(newConfig);
+      }
+    });
+
+    // Merge updated configs with new configs
+    const finalConfigs = [...updatedConfigs, ...newConfigs];
+    console.log('Final steeringConfigs:', finalConfigs);
+    
+    // Only update if there are changes
+    if (JSON.stringify(finalConfigs) !== JSON.stringify(steeringConfigs)) {
+      setSteeringConfigs(finalConfigs);
+    }
+  }, [steeringVectors]);
 
   const handleReset = async () => {
     if (!window.confirm('⚠️ Reset everything? This will unload the model and clear all data.')) {
@@ -304,7 +348,6 @@ function App() {
                     onSteeringConfigsChange={setSteeringConfigs}
                     onGenerationComplete={(result) => {
                       setGenerationResult(result);
-                      setCurrentTokenIndex(0); // Reset to first token on new generation
                     }}
                     onError={showError}
                   />
@@ -320,16 +363,13 @@ function App() {
                 <div className="right-panel">
                   {generationResult ? (
                     <VisualizationPanel
-                      apiBaseUrl={apiBaseUrl}
                       generationResult={generationResult}
-                      currentTokenIndex={currentTokenIndex}
-                      onTokenChange={setCurrentTokenIndex}
                       steeringConfigs={steeringConfigs}
                       onCoefficientChange={handleCoefficientChange}
                     />
                   ) : (
                     <div className="placeholder">
-                      <p>Generate text to see visualizations</p>
+                      <p>Generate text to see results</p>
                     </div>
                   )}
                 </div>
