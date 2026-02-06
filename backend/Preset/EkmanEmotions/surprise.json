@@ -1,0 +1,61 @@
+{
+  "metadata": {
+    "name": "surprise",
+    "target_layer": 16,
+    "description": "Enhances expression of surprise, shock and unexpectedness, contrasted with predictability and expectation. Based on Ekman's basic emotion of surprise.",
+    "created_at": "2026-02-06T10:00:00.000Z",
+    "version": "1.0"
+  },
+  "pairs": [
+    {
+      "id": 1770300060001,
+      "positive": "I didn't see that coming at all.",
+      "negative": "I expected this to happen."
+    },
+    {
+      "id": 1770300060002,
+      "positive": "I'm completely surprised by this.",
+      "negative": "This feels entirely predictable."
+    },
+    {
+      "id": 1770300060003,
+      "positive": "This caught me totally off guard.",
+      "negative": "This feels familiar and routine."
+    },
+    {
+      "id": 1770300060004,
+      "positive": "I'm shocked by what just happened.",
+      "negative": "I'm not shocked by what just happened."
+    },
+    {
+      "id": 1770300060005,
+      "positive": "I didn't expect this at all.",
+      "negative": "I fully expected this."
+    },
+    {
+      "id": 1770300060006,
+      "positive": "This was a real surprise.",
+      "negative": "This was completely unsurprising."
+    },
+    {
+      "id": 1770300060007,
+      "positive": "I'm amazed by this turn of events.",
+      "negative": "I'm unfazed by this turn of events."
+    },
+    {
+      "id": 1770300060008,
+      "positive": "This outcome surprised me.",
+      "negative": "This outcome was obvious to me."
+    },
+    {
+      "id": 1770300060009,
+      "positive": "I wasn't prepared for this.",
+      "negative": "I was fully prepared for this."
+    },
+    {
+      "id": 1770300060010,
+      "positive": "This revelation is unexpected.",
+      "negative": "This revelation confirms what I already knew."
+    }
+  ]
+}

@@ -172,12 +172,7 @@ async def reset_all():
             except Exception as e:
                 print(f"Warning: Could not clear hooks: {e}")
             
-            # Move model to CPU before deleting to ensure VRAM is freed
-            try:
-                model_state.model.to('cpu')
-            except Exception as e:
-                print(f"Warning: Could not move model to CPU: {e}")
-            
+            # Delete model directly from VRAM - no need to move to CPU first
             del model_state.model
             model_state.model = None
         
@@ -239,6 +234,10 @@ async def load_model(request: ModelLoadRequest):
         
         # Load tokenizer
         model_state.tokenizer = AutoTokenizer.from_pretrained(request.model_name)
+        
+        # Configure padding token if not present (required for batch processing)
+        if model_state.tokenizer.pad_token is None:
+            model_state.tokenizer.pad_token = model_state.tokenizer.eos_token
         
         # Load model with output_hidden_states support
         model_state.model = AutoModelForCausalLM.from_pretrained(
@@ -706,10 +705,16 @@ async def list_steering_vectors():
     """List all loaded steering vectors"""
     vectors_info = []
     for name, info in model_state.steering_vectors.items():
+        # Get shape from info or compute from vector
+        shape = info.get("shape", list(info["vector"].shape))
+        # Get norm from info or compute from vector
+        norm = info.get("norm", float(torch.norm(info["vector"]).item()))
+        
         vectors_info.append({
             "name": name,
-            "shape": info["shape"],
-            "norm": info["norm"]
+            "shape": shape,
+            "norm": norm,
+            "layer": info.get("layer", "unknown")
         })
     return {"vectors": vectors_info}
 
@@ -940,10 +945,16 @@ async def execute_preset(request: ExecutePresetRequest):
                 neg_mean = torch.stack(negative_activations).mean(dim=0)
                 steering_vector = (pos_mean - neg_mean).squeeze(0)
                 
-                # Store the steering vector
+                # Normalize the vector
+                steering_vector = steering_vector / torch.norm(steering_vector)
+                
+                # Store the steering vector with all necessary fields
                 model_state.steering_vectors[vector_name] = {
-                    "vector": steering_vector,
-                    "layer": target_layer
+                    "vector": steering_vector.cpu(),
+                    "layer": target_layer,
+                    "shape": list(steering_vector.shape),
+                    "norm": float(torch.norm(steering_vector).item()),
+                    "num_pairs": len(pairs)
                 }
                 
                 generated_vectors.append({

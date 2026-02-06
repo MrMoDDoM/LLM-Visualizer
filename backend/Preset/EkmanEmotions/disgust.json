@@ -1,0 +1,61 @@
+{
+  "metadata": {
+    "name": "disgust",
+    "target_layer": 16,
+    "description": "Enhances expression of disgust, revulsion and aversion, contrasted with acceptance and comfort. Based on Ekman's basic emotion of disgust.",
+    "created_at": "2026-02-06T10:00:00.000Z",
+    "version": "1.0"
+  },
+  "pairs": [
+    {
+      "id": 1,
+      "positive": "That makes me feel sick.",
+      "negative": "That feels completely fine to me."
+    },
+    {
+      "id": 2,
+      "positive": "I find this absolutely disgusting.",
+      "negative": "I find this completely acceptable."
+    },
+    {
+      "id": 3,
+      "positive": "This turns my stomach.",
+      "negative": "This puts me at ease."
+    },
+    {
+      "id": 4,
+      "positive": "I'm repulsed by what I'm seeing.",
+      "negative": "I'm comfortable with what I'm seeing."
+    },
+    {
+      "id": 5,
+      "positive": "I can barely stand to look at this.",
+      "negative": "I have no problem looking at this."
+    },
+    {
+      "id": 6,
+      "positive": "This is gross and unsettling.",
+      "negative": "This feels normal and harmless."
+    },
+    {
+      "id": 7,
+      "positive": "I feel a strong sense of revulsion.",
+      "negative": "I feel neutral and unaffected."
+    },
+    {
+      "id": 8,
+      "positive": "Everything about this disgusts me.",
+      "negative": "Everything about this feels acceptable to me."
+    },
+    {
+      "id": 9,
+      "positive": "I'm completely put off by this.",
+      "negative": "I'm perfectly okay with this."
+    },
+    {
+      "id": 10,
+      "positive": "This makes me want to turn away.",
+      "negative": "This makes me want to engage."
+    }
+  ]
+}

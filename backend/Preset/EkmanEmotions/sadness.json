@@ -1,0 +1,61 @@
+{
+  "metadata": {
+    "name": "sadness",
+    "target_layer": 16,
+    "description": "Enhances expression of sadness, grief and sorrow, contrasted with emotional stability and fulfillment. Based on Ekman's basic emotion of sadness.",
+    "created_at": "2026-02-06T10:00:00.000Z",
+    "version": "1.0"
+  },
+  "pairs": [
+    {
+      "id": 1,
+      "positive": "I feel deeply sad right now.",
+      "negative": "I feel emotionally okay right now."
+    },
+    {
+      "id": 2,
+      "positive": "This situation makes me feel empty.",
+      "negative": "This situation makes me feel fulfilled."
+    },
+    {
+      "id": 3,
+      "positive": "I feel a heavy sense of loss.",
+      "negative": "I feel a sense of gain and wholeness."
+    },
+    {
+      "id": 4,
+      "positive": "I can't stop feeling down.",
+      "negative": "I feel uplifted and hopeful."
+    },
+    {
+      "id": 5,
+      "positive": "Everything feels bleak and hopeless.",
+      "negative": "Everything feels bright and hopeful."
+    },
+    {
+      "id": 6,
+      "positive": "I feel alone and abandoned.",
+      "negative": "I feel supported and connected."
+    },
+    {
+      "id": 7,
+      "positive": "My heart feels heavy with sorrow.",
+      "negative": "My heart feels light and at peace."
+    },
+    {
+      "id": 8,
+      "positive": "I'm overwhelmed by sadness.",
+      "negative": "I'm steady and emotionally balanced."
+    },
+    {
+      "id": 9,
+      "positive": "This makes me want to give up.",
+      "negative": "This motivates me to keep going."
+    },
+    {
+      "id": 10,
+      "positive": "I feel tearful and broken.",
+      "negative": "I feel strong and emotionally whole."
+    }
+  ]
+}
